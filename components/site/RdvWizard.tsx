@@ -1,22 +1,24 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { ArrowLeft, ArrowRight, CalendarCheck, Check, Copy } from "lucide-react";
 import { m } from "@/components/ui/motion";
 import { ServiceIcon } from "@/components/ui/Icon";
-import { bind, Confetti, ETAT_INITIAL, Field, FormAlert, SubmitButton } from "@/components/ui/Form";
+import { bind, ETAT_INITIAL, Field, FormAlert, SubmitButton } from "@/components/ui/Form";
 import { confirmerRendezVous, prendreRendezVous } from "@/app/actions/public";
 import { CodeEmailForm } from "./CodeEmailForm";
 import { CRENEAUX } from "@/lib/constants";
 import { COULEURS } from "@/lib/theme";
+import { portraitParDefaut, src } from "@/lib/images";
 import { dateLongue, heure as fmtHeure, parseDate, toISODate } from "@/lib/format";
 import type { FormState, Medecin, Service } from "@/lib/types";
 
-const ETAPES = ["Service", "Médecin", "Créneau", "Vos infos"];
+const ETAPES = ["Department", "Doctor", "Time slot", "Your info"];
 
-/** Prochains jours ouvrés (à partir de demain). */
+/** Next business days (starting tomorrow). */
 function joursOuvres(n: number): string[] {
   const out: string[] = [];
   const d = new Date();
@@ -49,7 +51,7 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
   const medecinsDuService = medecins.filter((d) => d.service_id === serviceId);
   const jours = useMemo(() => joursOuvres(15), []);
 
-  // Jeton de la demande en attente du code reçu par e-mail, puis référence du RDV confirmé
+  // Token for the request pending the e-mailed code, then the reference of the confirmed appointment
   const [jeton, setJeton] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
   const [alerteCreneau, setAlerteCreneau] = useState<string | null>(null);
@@ -57,11 +59,11 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
   const aller = (n: number) => {
     setDirection(n > etape ? 1 : -1);
     setEtape(n);
-    // Revenir sur le choix du créneau abandonne le code déjà envoyé
+    // Going back to the time slot step discards the code already sent
     if (n < 3) setJeton(null);
   };
 
-  // Si le créneau a été pris entre-temps, on renvoie à l'étape créneau
+  // If the slot was taken in the meantime, send the user back to the time slot step
   const retourCreneau = (s: FormState) => {
     setAlerteCreneau(s.message);
     setJeton(null);
@@ -88,7 +90,7 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
 
   return (
     <div className="card overflow-hidden">
-      {/* Progression */}
+      {/* Progress */}
       <div className="border-b border-black/5 bg-white p-5 sm:p-6">
         <ol className="flex items-center gap-2">
           {ETAPES.map((nom, i) => {
@@ -104,15 +106,15 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
                   aria-current={actif ? "step" : undefined}
                 >
                   <m.span
-                    animate={{ scale: actif ? 1.1 : 1, backgroundColor: fait ? "#3ccfa5" : actif ? "#ff6b6b" : "#f1ebe2" }}
-                    className={`grid size-9 shrink-0 place-items-center rounded-full text-sm font-extrabold ${fait || actif ? "text-white" : "text-brume"}`}
+                    animate={{ backgroundColor: fait ? "#0d8f7f" : actif ? "#1668b3" : "#eef3f8" }}
+                    className={`grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-bold ${fait || actif ? "text-white" : "text-brume"}`}
                   >
                     {fait ? <Check className="size-4" /> : i + 1}
                   </m.span>
-                  <span className={`hidden text-sm font-extrabold md:block ${actif ? "text-encre" : "text-brume"}`}>{nom}</span>
+                  <span className={`hidden text-sm font-semibold md:block ${actif ? "text-encre" : "text-brume"}`}>{nom}</span>
                 </button>
                 {i < ETAPES.length - 1 && (
-                  <span className="relative h-1 flex-1 overflow-hidden rounded-full bg-[#f1ebe2]">
+                  <span className="relative h-0.5 flex-1 overflow-hidden rounded-full bg-voile">
                     <m.span className="absolute inset-y-0 left-0 rounded-full bg-menthe" animate={{ width: fait ? "100%" : "0%" }} transition={{ duration: 0.4 }} />
                   </span>
                 )}
@@ -134,7 +136,13 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
           >
             {etape === 0 && (
               <>
-                <h2 className="text-2xl font-semibold">Pour quel service ?</h2>
+                <h2 className="text-xl font-bold">Which department?</h2>
+                {services.length === 0 && (
+                  <p className="mt-6 rounded-lg border border-bord bg-creme p-5 text-sm text-brume">
+                    No department is yet open for online appointment booking. Please contact
+                    the hospital to arrange a consultation.
+                  </p>
+                )}
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {services.map((s) => {
                     const c = COULEURS[s.couleur];
@@ -151,14 +159,14 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
                           setServiceId(s.id);
                           aller(1);
                         }}
-                        className={`group flex items-center gap-3 rounded-2xl border-2 p-4 text-left transition-all hover:-translate-y-0.5 ${
-                          choisi ? `border-transparent ${c.soft} ring-4 ${c.ring}` : "border-[#f1ebe2] bg-white hover:border-transparent hover:shadow-lg"
+                        className={`group flex items-center gap-3 rounded-lg border p-3.5 text-left transition-colors ${
+                          choisi ? "border-azur bg-azur/5 ring-1 ring-azur" : "border-bord bg-white hover:border-azur"
                         }`}
                       >
-                        <span className={`grid size-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${c.grad} text-white transition-transform group-hover:rotate-[-8deg]`}>
+                        <span className={`grid size-10 shrink-0 place-items-center rounded-lg ${c.soft} ${c.text}`}>
                           <ServiceIcon name={s.icone} className="size-5" />
                         </span>
-                        <span className="min-w-0 text-sm leading-tight font-extrabold break-words hyphens-auto">{s.nom}</span>
+                        <span className="min-w-0 text-sm leading-tight font-semibold hyphens-auto wrap-break-word">{s.nom}</span>
                       </button>
                     );
                   })}
@@ -168,8 +176,13 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
 
             {etape === 1 && service && (
               <>
-                <h2 className="text-2xl font-semibold">Avec quel médecin ?</h2>
+                <h2 className="text-2xl font-semibold">With which doctor?</h2>
                 <p className="mt-1 text-brume">{service.nom}</p>
+                {medecinsDuService.length === 0 && (
+                  <p className="mt-6 rounded-lg border border-bord bg-creme p-5 text-sm text-brume">
+                    No practitioner is attached to this department at the moment.
+                  </p>
+                )}
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   {medecinsDuService.map((d) => {
                     const choisi = d.id === medecinId;
@@ -183,18 +196,26 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
                           setMedecinId(d.id);
                           aller(2);
                         }}
-                        className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-left transition-all enabled:hover:-translate-y-0.5 enabled:hover:shadow-lg disabled:opacity-50 ${
-                          choisi ? "border-corail bg-rose-50" : "border-[#f1ebe2] bg-white"
+                        className={`flex items-center gap-4 rounded-lg border p-3 text-left transition-colors disabled:opacity-55 ${
+                          choisi ? "border-azur bg-azur/5 ring-1 ring-azur" : "border-bord bg-white enabled:hover:border-azur"
                         }`}
                       >
-                        <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-creme text-3xl">{d.avatar}</span>
-                        <span>
-                          <span className="block font-extrabold">
+                        <span className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-voile">
+                          <Image
+                            src={src(d.photo, portraitParDefaut(d.id), 160)}
+                            alt=""
+                            fill
+                            sizes="56px"
+                            className="object-cover object-top"
+                          />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[15px] font-semibold">
                             {d.titre} {d.prenom} {d.nom}
                           </span>
                           <span className="block text-sm text-brume">{d.specialite}</span>
-                          <span className={`mt-1 inline-block text-xs font-extrabold ${d.disponible ? "text-emerald-600" : "text-slate-500"}`}>
-                            {d.disponible ? "● Prend de nouveaux patients" : "Indisponible actuellement"}
+                          <span className={`mt-1 inline-block text-xs font-semibold ${d.disponible ? "text-menthe" : "text-brume"}`}>
+                            {d.disponible ? "Accepting new patients" : "Currently unavailable"}
                           </span>
                         </span>
                       </button>
@@ -207,7 +228,7 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
 
             {etape === 2 && medecin && (
               <>
-                <h2 className="text-2xl font-semibold">Quel jour et à quelle heure ?</h2>
+                <h2 className="text-xl font-bold">Which day and time?</h2>
                 <p className="mt-1 text-brume">
                   {medecin.titre} {medecin.prenom} {medecin.nom} · {medecin.specialite}
                 </p>
@@ -223,15 +244,15 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
                           setDate(j);
                           setHeure(null);
                         }}
-                        className={`w-[72px] shrink-0 snap-start rounded-2xl py-3 text-center transition-all ${
-                          choisi ? "scale-105 bg-encre text-white shadow-lg" : "bg-creme text-encre hover:bg-amber-100"
+                        className={`w-18 shrink-0 snap-start rounded-lg border py-2.5 text-center transition-colors ${
+                          choisi ? "border-azur bg-azur text-white" : "border-bord bg-white text-encre hover:border-azur"
                         }`}
                       >
-                        <span className="block text-xs font-bold uppercase opacity-70">
-                          {d.toLocaleDateString("fr-FR", { weekday: "short" })}
+                        <span className="block text-[11px] font-semibold uppercase opacity-70">
+                          {d.toLocaleDateString("en-GB", { weekday: "short" })}
                         </span>
-                        <span className="block font-display text-2xl font-semibold">{d.getDate()}</span>
-                        <span className="block text-xs font-bold opacity-70">{d.toLocaleDateString("fr-FR", { month: "short" })}</span>
+                        <span className="block font-display text-xl font-bold">{d.getDate()}</span>
+                        <span className="block text-[11px] font-semibold opacity-70">{d.toLocaleDateString("en-GB", { month: "short" })}</span>
                       </button>
                     );
                   })}
@@ -239,16 +260,18 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
                 {date ? (
                   <Creneaux medecinId={medecin.id} date={date} choisi={heure} onChoisir={setHeure} />
                 ) : (
-                  <p className="mt-6 rounded-2xl bg-creme p-6 text-center font-bold text-brume">👆 Choisissez une date pour voir les créneaux libres</p>
+                  <p className="mt-6 rounded-lg border border-bord bg-creme p-6 text-center text-sm text-brume">
+                    Choose a date to display the available time slots.
+                  </p>
                 )}
-                {alerteCreneau && !heure && <p className="mt-4 text-sm font-bold text-corail">{alerteCreneau}</p>}
+                {alerteCreneau && !heure && <p className="mt-4 text-sm font-semibold text-corail">{alerteCreneau}</p>}
                 <NavEtapes onPrev={() => aller(1)} onNext={date && heure ? () => aller(3) : undefined} />
               </>
             )}
 
             {etape === 3 && service && medecin && date && heure && jeton && (
               <>
-                <h2 className="text-2xl font-semibold">Vérifiez votre boîte mail</h2>
+                <h2 className="text-xl font-bold">Check your inbox</h2>
                 <div className="mt-4">
                   <CodeEmailForm
                     jeton={jeton}
@@ -256,9 +279,9 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
                     confirmer={confirmerRendezVous}
                     onResult={resultatCode}
                     onRetour={() => setJeton(null)}
-                    retourLabel="← Modifier mes informations"
+                    retourLabel="← Edit my information"
                   >
-                    Valider mon rendez-vous <Check className="size-4" />
+                    Confirm my appointment <Check className="size-4" />
                   </CodeEmailForm>
                 </div>
               </>
@@ -266,45 +289,45 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
 
             {etape === 3 && service && medecin && date && heure && !jeton && (
               <form action={action} className="grid gap-4" noValidate>
-                <h2 className="text-2xl font-semibold">Quelques informations</h2>
-                <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-creme p-4 text-sm font-bold">
-                  <CalendarCheck className="size-5 text-corail" />
-                  {dateLongue(date)} à {fmtHeure(heure)} — {medecin.titre} {medecin.nom} ({service.nom})
+                <h2 className="text-xl font-bold">A few details</h2>
+                <div className="flex flex-wrap items-center gap-2.5 rounded-lg border border-bord bg-creme p-4 text-sm font-semibold">
+                  <CalendarCheck className="size-4 text-azur" />
+                  {dateLongue(date)} at {fmtHeure(heure)} — {medecin.titre} {medecin.nom} ({service.nom})
                 </div>
                 <input type="hidden" name="service_id" value={service.id} />
                 <input type="hidden" name="medecin_id" value={medecin.id} />
                 <input type="hidden" name="date_rdv" value={date} />
                 <input type="hidden" name="heure" value={heure} />
                 <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
-                  <Field label="Nom et prénom de l'enfant" name="enfant_nom" error={state.errors?.enfant_nom}>
+                  <Field label="Child's full name" name="enfant_nom" error={state.errors?.enfant_nom}>
                     <input {...bind(state, "enfant_nom")} className="field" required />
                   </Field>
-                  <Field label="Âge" name="enfant_age" error={state.errors?.enfant_age}>
+                  <Field label="Age" name="enfant_age" error={state.errors?.enfant_age}>
                     <input {...bind(state, "enfant_age")} type="number" min={0} max={18} className="field" required />
                   </Field>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <Field label="Nom du parent" name="parent_nom" error={state.errors?.parent_nom}>
+                  <Field label="Parent's name" name="parent_nom" error={state.errors?.parent_nom}>
                     <input {...bind(state, "parent_nom")} className="field" autoComplete="name" required />
                   </Field>
                   <Field label="E-mail" name="email" error={state.errors?.email}>
                     <input {...bind(state, "email")} type="email" className="field" autoComplete="email" required />
                   </Field>
-                  <Field label="Téléphone" name="telephone" error={state.errors?.telephone}>
+                  <Field label="Phone" name="telephone" error={state.errors?.telephone}>
                     <input {...bind(state, "telephone")} type="tel" className="field" autoComplete="tel" required />
                   </Field>
                 </div>
-                <Field label="Motif de la consultation" name="motif" error={state.errors?.motif} hint="Quelques mots suffisent (symptômes, suivi, contrôle…)">
+                <Field label="Reason for the consultation" name="motif" error={state.errors?.motif} hint="A few words are enough (symptoms, follow-up, check-up…)">
                   <textarea {...bind(state, "motif")} rows={3} maxLength={500} className="field resize-none" required />
                 </Field>
                 <FormAlert state={state.ok ? ETAT_INITIAL : state} />
-                <p className="text-xs text-brume">Un code de confirmation vous sera envoyé par e-mail pour valider la réservation.</p>
+                <p className="text-xs text-brume">A confirmation code will be sent to you by e-mail to validate the booking.</p>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <button type="button" onClick={() => aller(2)} className="btn bg-creme text-encre">
-                    <ArrowLeft className="size-4" /> Retour
+                  <button type="button" onClick={() => aller(2)} className="btn btn-secondaire">
+                    <ArrowLeft className="size-4" /> Back
                   </button>
                   <SubmitButton pending={pending}>
-                    Confirmer le rendez-vous <Check className="size-4" />
+                    Confirm the appointment <Check className="size-4" />
                   </SubmitButton>
                 </div>
               </form>
@@ -319,11 +342,11 @@ export function RdvWizard({ services, medecins, serviceInitial, medecinInitial }
 function NavEtapes({ onPrev, onNext }: { onPrev: () => void; onNext?: () => void }) {
   return (
     <div className="mt-8 flex justify-between gap-3">
-      <button type="button" onClick={onPrev} className="btn bg-creme text-encre">
-        <ArrowLeft className="size-4" /> Retour
+      <button type="button" onClick={onPrev} className="btn btn-secondaire">
+        <ArrowLeft className="size-4" /> Back
       </button>
-      <button type="button" onClick={onNext} disabled={!onNext} className="btn bg-encre text-white">
-        Continuer <ArrowRight className="size-4" />
+      <button type="button" onClick={onNext} disabled={!onNext} className="btn btn-primaire">
+        Continue <ArrowRight className="size-4" />
       </button>
     </div>
   );
@@ -342,11 +365,11 @@ function Creneaux({ medecinId, date, choisi, onChoisir }: { medecinId: number; d
         setErreur(null);
         setRes({ cle: `${medecinId}|${date}`, pris: d.pris });
       })
-      .catch((e) => e.name !== "AbortError" && setErreur("Impossible de charger les créneaux."));
+      .catch((e) => e.name !== "AbortError" && setErreur("Unable to load the time slots."));
     return () => ctrl.abort();
   }, [medecinId, date]);
 
-  if (erreur) return <p className="mt-6 font-bold text-corail">{erreur}</p>;
+  if (erreur) return <p className="mt-6 text-sm font-semibold text-corail">{erreur}</p>;
   if (!res || res.cle !== cle)
     return (
       <div className="mt-6 grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -360,7 +383,7 @@ function Creneaux({ medecinId, date, choisi, onChoisir }: { medecinId: number; d
   return (
     <div className="mt-6">
       <p className="mb-3 text-sm font-bold text-brume">
-        {libres} créneau{libres > 1 ? "x" : ""} disponible{libres > 1 ? "s" : ""}
+        {libres} time slot{libres === 1 ? "" : "s"} available
       </p>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
         {CRENEAUX.map((h, i) => {
@@ -375,12 +398,12 @@ function Creneaux({ medecinId, date, choisi, onChoisir }: { medecinId: number; d
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.025 }}
-              className={`rounded-xl py-3 text-sm font-extrabold transition-all ${
+              className={`rounded-lg border py-2.5 text-sm font-semibold transition-colors ${
                 pris
-                  ? "cursor-not-allowed bg-slate-100 text-slate-400 line-through"
+                  ? "cursor-not-allowed border-bord bg-voile text-brume/70 line-through"
                   : actif
-                    ? "scale-105 bg-corail text-white shadow-lg shadow-corail/30"
-                    : "bg-white ring-2 ring-[#f1ebe2] hover:ring-corail"
+                    ? "border-azur bg-azur text-white"
+                    : "border-bord bg-white hover:border-azur hover:text-azur"
               }`}
             >
               {fmtHeure(h)}
@@ -395,42 +418,42 @@ function Creneaux({ medecinId, date, choisi, onChoisir }: { medecinId: number; d
 function Confirmation({ reference, service, medecin, date, heure }: { reference: string; service?: Service; medecin?: Medecin; date: string; heure: string }) {
   const [copie, setCopie] = useState(false);
   return (
-    <div className="card relative overflow-hidden p-8 text-center sm:p-12">
-      <Confetti />
+    <div className="card p-8 text-center sm:p-12">
       <m.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 12 }}
-        className="mx-auto grid size-24 place-items-center rounded-full bg-emerald-100 text-5xl"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto grid size-14 place-items-center rounded-full bg-menthe/10 text-menthe"
       >
-        🎉
+        <Check className="size-7" />
       </m.div>
-      <h2 className="mt-6 text-3xl font-semibold">Rendez-vous enregistré !</h2>
-      <p className="mx-auto mt-2 max-w-md text-brume">
-        Notre secrétariat va le confirmer très vite. Conservez bien votre référence pour le suivre ou l&apos;annuler.
+      <h2 className="mt-5 text-2xl font-bold">Appointment request recorded</h2>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-brume">
+        The department’s office will confirm the time slot within 48 hours. Keep your reference to
+        track or cancel this appointment.
       </p>
       <button
         type="button"
         onClick={() => {
           navigator.clipboard?.writeText(reference).then(() => setCopie(true), () => {});
         }}
-        className="mx-auto mt-6 flex items-center gap-3 rounded-2xl border-2 border-dashed border-corail bg-rose-50 px-6 py-4 font-mono text-2xl font-bold tracking-[0.2em] text-corail"
-        title="Copier la référence"
+        className="mx-auto mt-6 flex items-center gap-3 rounded-lg border border-dashed border-azur bg-azur/5 px-5 py-3 font-mono text-xl font-bold tracking-[0.2em] text-azur"
+        title="Copy the reference"
       >
         {reference} {copie ? <Check className="size-5" /> : <Copy className="size-5" />}
       </button>
-      <dl className="mx-auto mt-8 grid max-w-md gap-2 rounded-2xl bg-creme p-5 text-left text-sm">
-        <div className="flex justify-between gap-4"><dt className="font-bold text-brume">Date</dt><dd className="text-right font-extrabold">{dateLongue(date)}</dd></div>
-        <div className="flex justify-between gap-4"><dt className="font-bold text-brume">Heure</dt><dd className="font-extrabold">{fmtHeure(heure)}</dd></div>
-        <div className="flex justify-between gap-4"><dt className="font-bold text-brume">Médecin</dt><dd className="text-right font-extrabold">{medecin?.titre} {medecin?.prenom} {medecin?.nom}</dd></div>
-        <div className="flex justify-between gap-4"><dt className="font-bold text-brume">Service</dt><dd className="text-right font-extrabold">{service?.nom}</dd></div>
+      <dl className="mx-auto mt-8 grid max-w-md gap-2.5 rounded-lg border border-bord bg-creme p-5 text-left text-sm">
+        <div className="flex justify-between gap-4"><dt className="text-brume">Date</dt><dd className="text-right font-semibold">{dateLongue(date)}</dd></div>
+        <div className="flex justify-between gap-4"><dt className="text-brume">Time</dt><dd className="font-semibold">{fmtHeure(heure)}</dd></div>
+        <div className="flex justify-between gap-4"><dt className="text-brume">Doctor</dt><dd className="text-right font-semibold">{medecin?.titre} {medecin?.prenom} {medecin?.nom}</dd></div>
+        <div className="flex justify-between gap-4"><dt className="text-brume">Department</dt><dd className="text-right font-semibold">{service?.nom}</dd></div>
       </dl>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link href={`/rendez-vous/suivi?ref=${reference}`} className="btn bg-encre text-white">
-          Suivre mon rendez-vous
+        <Link href={`/rendez-vous/suivi?ref=${reference}`} className="btn btn-primaire">
+          Track my appointment
         </Link>
-        <Link href="/" className="btn bg-creme text-encre">
-          Retour à l&apos;accueil
+        <Link href="/" className="btn btn-secondaire">
+          Back to home
         </Link>
       </div>
     </div>

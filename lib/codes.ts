@@ -4,19 +4,19 @@ import { execute, queryOne } from "./db";
 import { mailCode, sendMail } from "./mail";
 import { signToken, verifyToken } from "./session";
 
-// Codes de confirmation envoyés aux familles (prise et annulation de rendez-vous).
-// Le navigateur ne garde qu'un jeton signé ; les données en attente restent en base.
+// Confirmation codes sent to families (booking and cancelling an appointment).
+// The browser only keeps a signed token; the pending data stays in the database.
 
 export type ObjetCode = "rdv" | "annulation";
 
 export const CODE_DURATION_MIN = 15;
 export const RESEND_DELAY_S = 60;
 const MAX_ATTEMPTS = 5;
-const MAX_CODES_PAR_HEURE = 5; // par adresse e-mail : évite d'utiliser le site pour spammer
+const MAX_CODES_PAR_HEURE = 5; // per e-mail address: prevents using the site to spam
 
 const LIBELLES: Record<ObjetCode, string> = {
-  rdv: "confirmer votre demande de rendez-vous",
-  annulation: "confirmer l'annulation de votre rendez-vous",
+  rdv: "confirm your appointment request",
+  annulation: "confirm the cancellation of your appointment",
 };
 
 interface Jeton {
@@ -41,9 +41,9 @@ async function envoyer(id: number, objet: ObjetCode, email: string) {
   await sendMail(mailCode({ to: email, code, minutes: CODE_DURATION_MIN, pour: LIBELLES[objet] }));
 }
 
-/** Enregistre une demande en attente, envoie le code et renvoie le jeton à rendre avec le code. */
+/** Stores a pending request, sends the code, and returns the token to pass back with the code. */
 export async function creerCode(objet: ObjetCode, email: string, donnees: Record<string, string>): Promise<string> {
-  // Ménage : les demandes jamais confirmées sont oubliées au bout d'un jour
+  // Cleanup: requests that are never confirmed are forgotten after one day
   await execute("DELETE FROM codes_email WHERE expires_at < NOW() - INTERVAL 1 DAY");
   const recents = await queryOne<{ n: number }>(
     "SELECT COUNT(*) AS n FROM codes_email WHERE email = ? AND created_at > NOW() - INTERVAL 1 HOUR",
@@ -66,15 +66,15 @@ export async function creerCode(objet: ObjetCode, email: string, donnees: Record
   return signToken("code-email", { id, objet, exp: Math.floor(Date.now() / 1000) + 60 * 60 });
 }
 
-/** Renvoie un nouveau code pour la même demande. Retourne le nombre de secondes à patienter (0 = envoyé). */
+/** Sends a new code for the same request. Returns the number of seconds to wait (0 = sent). */
 export async function renvoyerCode(jeton: string): Promise<number> {
   const j = await verifyToken<Jeton>("code-email", jeton);
-  if (!j) throw new Error("Jeton invalide");
+  if (!j) throw new Error("Invalid token");
   const row = await queryOne<{ email: string; attente: number }>(
     "SELECT email, GREATEST(0, ? - TIMESTAMPDIFF(SECOND, created_at, NOW())) AS attente FROM codes_email WHERE id = ?",
     [RESEND_DELAY_S, j.id],
   );
-  if (!row) throw new Error("Demande introuvable");
+  if (!row) throw new Error("Request not found");
   if (Number(row.attente) > 0) return Number(row.attente);
   await envoyer(j.id, j.objet, row.email);
   return 0;
@@ -84,12 +84,12 @@ export type Verification =
   | { ok: true; email: string; donnees: Record<string, string> }
   | { ok: false; raison: "invalide" | "expire" };
 
-/** Vérifie le code : 5 essais maximum, usage unique. La demande est supprimée en cas de succès. */
+/** Verifies the code: 5 attempts maximum, single use. The request is deleted on success. */
 export async function verifierCode(objet: ObjetCode, jeton: string, code: string): Promise<Verification> {
   const j = await verifyToken<Jeton>("code-email", jeton);
   if (!j || j.objet !== objet) return { ok: false, raison: "expire" };
 
-  // Compteur incrémenté avant la comparaison : la limite tient même avec des requêtes parallèles.
+  // Counter incremented before the comparison: the limit holds even with parallel requests.
   const res = await execute(
     "UPDATE codes_email SET tentatives = tentatives + 1 WHERE id = ? AND tentatives < ? AND expires_at > NOW()",
     [j.id, MAX_ATTEMPTS],
@@ -101,10 +101,14 @@ export async function verifierCode(objet: ObjetCode, jeton: string, code: string
     [j.id],
   );
   if (!row) return { ok: false, raison: "expire" };
-  if (!timingSafeEqual(Buffer.from(row.code_hash, "hex"), Buffer.from(hashCode(j.id, code), "hex")))
+  const attendu = Buffer.from(row.code_hash, "hex");
+  const saisi = Buffer.from(hashCode(j.id, code), "hex");
+  // timingSafeEqual throws on differing lengths (a row whose code_hash is still the empty
+  // placeholder, for instance): treat it as a wrong code rather than a server error.
+  if (attendu.length !== saisi.length || !timingSafeEqual(attendu, saisi))
     return { ok: false, raison: "invalide" };
 
-  // Usage unique : seul le premier qui supprime la ligne valide la demande
+  // Single use: only the first one to delete the row validates the request
   const del = await execute("DELETE FROM codes_email WHERE id = ?", [j.id]);
   if (del.affectedRows === 0) return { ok: false, raison: "expire" };
   const donnees = typeof row.donnees === "string" ? JSON.parse(row.donnees) : row.donnees;

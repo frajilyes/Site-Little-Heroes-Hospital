@@ -6,7 +6,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { execute, isDuplicateError, queryOne, transaction } from "@/lib/db";
 import { CRENEAUX } from "@/lib/constants";
 import { PROJETS_DONS } from "@/lib/theme";
-import { DATE, EMAIL, HEURE, TEL, validate } from "@/lib/validation";
+import { EMAIL, HEURE, TEL, validate } from "@/lib/validation";
 import { dateLongue, heure as fmtHeure, parseDate, toISODate } from "@/lib/format";
 import { creerCode, renvoyerCode, TropDeDemandes, verifierCode, type Verification } from "@/lib/codes";
 import { mailRecapRdv, sendMail } from "@/lib/mail";
@@ -14,7 +14,7 @@ import type { FormState } from "@/lib/types";
 
 const ERREUR_SERVEUR: FormState = {
   ok: false,
-  message: "Oups, une erreur est survenue. Merci de réessayer dans un instant.",
+  message: "Oops, something went wrong. Please try again in a moment.",
 };
 
 function reference(): string {
@@ -22,24 +22,24 @@ function reference(): string {
   return Array.from(randomBytes(8), (b) => alphabet[b % alphabet.length]).join("");
 }
 
-/* ------------------------------ Rendez-vous ------------------------------ */
+/* ------------------------------ Appointments ------------------------------ */
 
 export async function prendreRendezVous(_prev: FormState, formData: FormData): Promise<FormState> {
   const { data, errors, ok } = validate(formData, {
-    service_id: { label: "Le service", required: true, int: [1, 10_000] },
-    medecin_id: { label: "Le médecin", required: true, int: [1, 10_000] },
-    date_rdv: { label: "La date", required: true, pattern: DATE },
-    heure: { label: "L'horaire", required: true, pattern: HEURE },
-    enfant_nom: { label: "Le nom de l'enfant", required: true, min: 2, max: 120 },
-    enfant_age: { label: "L'âge", required: true, int: [0, 18] },
-    parent_nom: { label: "Le nom du parent", required: true, min: 2, max: 120 },
-    email: { label: "L'e-mail", required: true, pattern: EMAIL, patternMsg: "Adresse e-mail invalide.", max: 160 },
-    telephone: { label: "Le téléphone", required: true, pattern: TEL, patternMsg: "Numéro de téléphone invalide." },
-    motif: { label: "Le motif", required: true, min: 5, max: 500 },
+    service_id: { label: "Department", required: true, int: [1, 10_000] },
+    medecin_id: { label: "Doctor", required: true, int: [1, 10_000] },
+    date_rdv: { label: "Date", required: true, date: true },
+    heure: { label: "Time", required: true, pattern: HEURE },
+    enfant_nom: { label: "Child's name", required: true, min: 2, max: 120 },
+    enfant_age: { label: "Age", required: true, int: [0, 18] },
+    parent_nom: { label: "Parent's name", required: true, min: 2, max: 120 },
+    email: { label: "Email", required: true, pattern: EMAIL, patternMsg: "Invalid email address.", max: 160 },
+    telephone: { label: "Phone number", required: true, pattern: TEL, patternMsg: "Invalid phone number." },
+    motif: { label: "Reason", required: true, min: 5, max: 500 },
   });
-  if (!ok) return { ok: false, message: "Merci de corriger les champs indiqués.", errors, data };
+  if (!ok) return { ok: false, message: "Please correct the fields indicated.", errors, data };
 
-  if (!CRENEAUX.includes(data.heure)) return { ok: false, message: "Ce créneau n'existe pas.", data };
+  if (!CRENEAUX.includes(data.heure)) return { ok: false, message: "This time slot does not exist.", data };
 
   const jour = parseDate(data.date_rdv);
   const today = parseDate(toISODate(new Date()));
@@ -48,8 +48,8 @@ export async function prendreRendezVous(_prev: FormState, formData: FormData): P
   if (jour <= today || jour > max || jour.getDay() === 0 || jour.getDay() === 6) {
     return {
       ok: false,
-      message: "Choisissez un jour ouvré entre demain et les 3 prochains mois.",
-      errors: { date_rdv: "Date indisponible." },
+      message: "Choose a weekday between tomorrow and the next 3 months.",
+      errors: { date_rdv: "Date unavailable." },
       data,
     };
   }
@@ -64,10 +64,10 @@ export async function prendreRendezVous(_prev: FormState, formData: FormData): P
     );
     if (pris) return { ...CRENEAU_PRIS, data };
 
-    // Le rendez-vous n'est créé qu'après saisie du code reçu : l'adresse e-mail est forcément valide.
+    // The appointment is only created once the received code is entered: the email address is guaranteed valid.
     const email = data.email.toLowerCase();
     const jeton = await creerCode("rdv", email, { ...data, email });
-    return { ok: true, message: `Code envoyé à ${email}.`, data: { ...data, jeton } };
+    return { ok: true, message: `Code sent to ${email}.`, data: { ...data, jeton } };
   } catch (err) {
     if (err instanceof TropDeDemandes) return { ...TROP_DE_CODES, data };
     console.error(err);
@@ -75,7 +75,7 @@ export async function prendreRendezVous(_prev: FormState, formData: FormData): P
   }
 }
 
-/** Étape 2 : le code reçu par e-mail valide la demande, le rendez-vous est alors enregistré. */
+/** Step 2: the code received by email validates the request, and the appointment is then saved. */
 export async function confirmerRendezVous(_prev: FormState, formData: FormData): Promise<FormState> {
   const verif = await verifierSaisie("rdv", formData);
   if (!verif.ok) return verif.state;
@@ -105,7 +105,7 @@ export async function confirmerRendezVous(_prev: FormState, formData: FormData):
     );
     revalidatePath("/", "layout");
     await envoyerRecap(ref, verif.email, data);
-    return { ok: true, message: "Rendez-vous enregistré !", data: { reference: ref } };
+    return { ok: true, message: "Appointment booked!", data: { reference: ref } };
   } catch (err) {
     if (isDuplicateError(err)) return CRENEAU_PRIS;
     console.error(err);
@@ -118,12 +118,12 @@ async function verifierMedecin(medecinId: number, serviceId: number): Promise<st
     medecinId,
     serviceId,
   ]);
-  if (!medecin) return "Ce médecin n'exerce pas dans ce service.";
-  if (!medecin.disponible) return "Ce médecin ne prend pas de rendez-vous actuellement.";
+  if (!medecin) return "This doctor does not practice in this department.";
+  if (!medecin.disponible) return "This doctor is not currently taking appointments.";
   return null;
 }
 
-/** E-mail récapitulatif : un échec d'envoi n'annule pas le rendez-vous. */
+/** Recap email: a delivery failure does not cancel the appointment. */
 async function envoyerRecap(ref: string, email: string, data: Record<string, string>) {
   try {
     const info = await queryOne<{ medecin: string; service: string }>(
@@ -136,7 +136,7 @@ async function envoyerRecap(ref: string, email: string, data: Record<string, str
         reference: ref,
         parent: data.parent_nom,
         enfant: data.enfant_nom,
-        quand: `${dateLongue(data.date_rdv)} à ${fmtHeure(data.heure)}`,
+        quand: `${dateLongue(data.date_rdv)} at ${fmtHeure(data.heure)}`,
         medecin: info?.medecin ?? "",
         service: info?.service ?? "",
       }),
@@ -146,17 +146,17 @@ async function envoyerRecap(ref: string, email: string, data: Record<string, str
   }
 }
 
-/* ------------------------------ Codes reçus par e-mail ------------------------------ */
+/* ------------------------------ Codes received by email ------------------------------ */
 
 const CRENEAU_PRIS: FormState = {
   ok: false,
-  message: "Ce créneau vient d'être réservé par une autre famille. Choisissez un autre horaire.",
-  errors: { heure: "Créneau déjà pris." },
+  message: "This time slot was just booked by another family. Please choose another time.",
+  errors: { heure: "Time slot already taken." },
 };
 
 const TROP_DE_CODES: FormState = {
   ok: false,
-  message: "Trop de codes ont été demandés pour cette adresse. Réessayez dans une heure.",
+  message: "Too many codes have been requested for this address. Please try again in an hour.",
 };
 
 type Saisie = { ok: true; email: string; donnees: Record<string, string> } | { ok: false; state: FormState };
@@ -165,7 +165,7 @@ async function verifierSaisie(objet: "rdv" | "annulation", formData: FormData): 
   const jeton = String(formData.get("jeton") ?? "");
   const code = String(formData.get("code") ?? "").replace(/\D/g, "");
   if (code.length !== 6)
-    return { ok: false, state: { ok: false, message: "Le code contient 6 chiffres.", errors: { code: "Code incomplet." } } };
+    return { ok: false, state: { ok: false, message: "The code has 6 digits.", errors: { code: "Incomplete code." } } };
 
   let verif: Verification;
   try {
@@ -179,38 +179,38 @@ async function verifierSaisie(objet: "rdv" | "annulation", formData: FormData): 
     ok: false,
     state:
       verif.raison === "invalide"
-        ? { ok: false, message: "Code incorrect. Vérifiez l'e-mail reçu.", errors: { code: "Code incorrect." } }
-        : { ok: false, message: "Ce code a expiré ou trop d'essais ont échoué. Demandez un nouveau code.", errors: { code: "Code expiré." } },
+        ? { ok: false, message: "Incorrect code. Check the email you received.", errors: { code: "Incorrect code." } }
+        : { ok: false, message: "This code has expired or too many attempts failed. Request a new code.", errors: { code: "Code expired." } },
   };
 }
 
 export async function renvoyerCodeEmail(jeton: string): Promise<FormState> {
   try {
     const attente = await renvoyerCode(jeton);
-    if (attente > 0) return { ok: false, message: `Patientez ${attente} s avant de demander un nouveau code.` };
-    return { ok: true, message: "Un nouveau code vous a été envoyé." };
+    if (attente > 0) return { ok: false, message: `Please wait ${attente}s before requesting a new code.` };
+    return { ok: true, message: "A new code has been sent to you." };
   } catch (err) {
     console.error(err);
-    return { ok: false, message: "Impossible de renvoyer le code. Recommencez la démarche." };
+    return { ok: false, message: "Could not resend the code. Please start over." };
   }
 }
 
-/* ------------------------------ Activités ------------------------------ */
+/* ------------------------------ Activities ------------------------------ */
 
 export async function inscrireActivite(_prev: FormState, formData: FormData): Promise<FormState> {
   const { data, errors, ok } = validate(formData, {
-    activite_id: { label: "L'activité", required: true, int: [1, 100_000] },
-    enfant_nom: { label: "Le prénom de l'enfant", required: true, min: 2, max: 120 },
-    age: { label: "L'âge", required: true, int: [0, 18] },
-    chambre: { label: "La chambre", max: 20 },
-    parent_nom: { label: "Le nom du parent", required: true, min: 2, max: 120 },
-    telephone: { label: "Le téléphone", required: true, pattern: TEL, patternMsg: "Numéro de téléphone invalide." },
+    activite_id: { label: "Activity", required: true, int: [1, 100_000] },
+    enfant_nom: { label: "Child's first name", required: true, min: 2, max: 120 },
+    age: { label: "Age", required: true, int: [0, 18] },
+    chambre: { label: "Room", max: 20 },
+    parent_nom: { label: "Parent's name", required: true, min: 2, max: 120 },
+    telephone: { label: "Phone number", required: true, pattern: TEL, patternMsg: "Invalid phone number." },
   });
-  if (!ok) return { ok: false, message: "Merci de corriger les champs indiqués.", errors, data };
+  if (!ok) return { ok: false, message: "Please correct the fields indicated.", errors, data };
 
   try {
     const result = await transaction(async (conn) => {
-      // Verrou sur l'activité : deux inscriptions simultanées ne peuvent pas dépasser la capacité.
+      // Lock on the activity: two simultaneous registrations cannot exceed capacity.
       const [rows] = await conn.execute<RowDataPacket[]>(
         `SELECT id, titre, places, age_min, age_max,
            DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL MOD(CAST(jour AS SIGNED) - 1 - WEEKDAY(CURDATE()) + 7, 7) DAY), '%Y-%m-%d') AS date_seance
@@ -218,14 +218,14 @@ export async function inscrireActivite(_prev: FormState, formData: FormData): Pr
         [Number(data.activite_id)],
       );
       const act = rows[0];
-      if (!act) return { ok: false, message: "Activité introuvable." } as FormState;
+      if (!act) return { ok: false, message: "Activity not found." } as FormState;
 
       const age = Number(data.age);
       if (age < act.age_min || age > act.age_max) {
         return {
           ok: false,
-          message: `Cette activité est prévue pour les ${act.age_min}-${act.age_max} ans.`,
-          errors: { age: "Âge hors tranche." },
+          message: `This activity is for ages ${act.age_min}-${act.age_max}.`,
+          errors: { age: "Age out of range." },
         } as FormState;
       }
 
@@ -233,7 +233,7 @@ export async function inscrireActivite(_prev: FormState, formData: FormData): Pr
         "SELECT COUNT(*) AS inscrits FROM inscriptions_activites WHERE activite_id = ? AND date_seance = ?",
         [act.id, act.date_seance],
       );
-      if (inscrits >= act.places) return { ok: false, message: "Désolé, cette séance est complète !" } as FormState;
+      if (inscrits >= act.places) return { ok: false, message: "Sorry, this session is full!" } as FormState;
 
       await conn.execute(
         `INSERT INTO inscriptions_activites (activite_id, date_seance, enfant_nom, age, chambre, parent_nom, telephone)
@@ -242,7 +242,7 @@ export async function inscrireActivite(_prev: FormState, formData: FormData): Pr
       );
       return {
         ok: true,
-        message: `${data.enfant_nom} est inscrit(e) à « ${act.titre} » !`,
+        message: `${data.enfant_nom} is registered for "${act.titre}"!`,
         data: { date_seance: act.date_seance },
       } as FormState;
     });
@@ -258,12 +258,12 @@ export async function inscrireActivite(_prev: FormState, formData: FormData): Pr
 
 export async function envoyerMessage(_prev: FormState, formData: FormData): Promise<FormState> {
   const { data, errors, ok } = validate(formData, {
-    nom: { label: "Le nom", required: true, min: 2, max: 120 },
-    email: { label: "L'e-mail", required: true, pattern: EMAIL, patternMsg: "Adresse e-mail invalide.", max: 160 },
-    sujet: { label: "Le sujet", required: true, min: 3, max: 200 },
-    message: { label: "Le message", required: true, min: 10, max: 3000 },
+    nom: { label: "Name", required: true, min: 2, max: 120 },
+    email: { label: "Email", required: true, pattern: EMAIL, patternMsg: "Invalid email address.", max: 160 },
+    sujet: { label: "Subject", required: true, min: 3, max: 200 },
+    message: { label: "Message", required: true, min: 10, max: 3000 },
   });
-  if (!ok) return { ok: false, message: "Merci de corriger les champs indiqués.", errors, data };
+  if (!ok) return { ok: false, message: "Please correct the fields indicated.", errors, data };
 
   try {
     await execute("INSERT INTO messages (nom, email, sujet, message) VALUES (?, ?, ?, ?)", [
@@ -273,25 +273,26 @@ export async function envoyerMessage(_prev: FormState, formData: FormData): Prom
       data.message,
     ]);
     revalidatePath("/admin", "layout");
-    return { ok: true, message: "Message envoyé ! Notre équipe vous répondra sous 48 h." };
+    return { ok: true, message: "Message sent! Our team will reply within 48 hours." };
   } catch (err) {
     console.error(err);
     return { ...ERREUR_SERVEUR, data };
   }
 }
 
-/* ------------------------------ Dons ------------------------------ */
+/* ------------------------------ Donations ------------------------------ */
 
 export async function faireDon(_prev: FormState, formData: FormData): Promise<FormState> {
   const { data, errors, ok } = validate(formData, {
-    montant: { label: "Le montant", required: true, int: [5, 100_000] },
-    projet: { label: "Le projet", required: true },
-    nom: { label: "Le nom", max: 120 },
-    email: { label: "L'e-mail", pattern: EMAIL, patternMsg: "Adresse e-mail invalide.", max: 160 },
-    message: { label: "Le message", max: 500 },
+    montant: { label: "Amount", required: true, int: [5, 100_000] },
+    projet: { label: "Project", required: true },
+    nom: { label: "Name", max: 120 },
+    email: { label: "Email", pattern: EMAIL, patternMsg: "Invalid email address.", max: 160 },
+    message: { label: "Message", max: 500 },
   });
-  if (!(data.projet in PROJETS_DONS)) errors.projet = "Projet inconnu.";
-  if (!ok || errors.projet) return { ok: false, message: "Merci de corriger les champs indiqués.", errors, data };
+  // hasOwn, not `in`: `in` also matches inherited keys, so projet=toString would pass.
+  if (!Object.hasOwn(PROJETS_DONS, data.projet)) errors.projet = "Unknown project.";
+  if (!ok || errors.projet) return { ok: false, message: "Please correct the fields indicated.", errors, data };
 
   try {
     await execute("INSERT INTO dons (nom, email, montant, projet, message) VALUES (?, ?, ?, ?, ?)", [
@@ -302,22 +303,22 @@ export async function faireDon(_prev: FormState, formData: FormData): Promise<Fo
       data.message || null,
     ]);
     revalidatePath("/", "layout");
-    return { ok: true, message: "Merci infiniment pour votre générosité ! 💛", data: { montant: data.montant } };
+    return { ok: true, message: "Thank you so much for your generosity! 💛", data: { montant: data.montant } };
   } catch (err) {
     console.error(err);
     return { ...ERREUR_SERVEUR, data };
   }
 }
 
-/* ------------------------------ Annulation par la famille ------------------------------ */
+/* ------------------------------ Cancellation by the family ------------------------------ */
 
-/** Étape 1 : vérifie la référence et l'e-mail, puis envoie un code à cette adresse. */
+/** Step 1: verifies the reference and email, then sends a code to that address. */
 export async function demanderAnnulation(_prev: FormState, formData: FormData): Promise<FormState> {
   const { data, ok } = validate(formData, {
-    reference: { label: "La référence", required: true, pattern: /^[A-Z0-9]{8}$/ },
-    email: { label: "L'e-mail", required: true, pattern: EMAIL },
+    reference: { label: "Reference", required: true, pattern: /^[A-Z0-9]{8}$/ },
+    email: { label: "Email", required: true, pattern: EMAIL },
   });
-  if (!ok) return { ok: false, message: "Référence ou e-mail invalide.", data };
+  if (!ok) return { ok: false, message: "Invalid reference or email.", data };
   const email = data.email.toLowerCase();
 
   try {
@@ -326,11 +327,11 @@ export async function demanderAnnulation(_prev: FormState, formData: FormData): 
        WHERE reference = ? AND email = ? AND statut IN ('en_attente','confirme') AND date_rdv >= CURDATE()`,
       [data.reference, email],
     );
-    if (!rdv) return { ok: false, message: "Annulation impossible : vérifiez l'e-mail utilisé lors de la réservation.", data };
+    if (!rdv) return { ok: false, message: "Cancellation not possible: check the email used when booking.", data };
 
-    // Seul le parent qui reçoit les e-mails de cette adresse peut annuler.
+    // Only the parent who receives emails at this address can cancel.
     const jeton = await creerCode("annulation", email, { reference: data.reference });
-    return { ok: true, message: `Code envoyé à ${email}.`, data: { ...data, jeton } };
+    return { ok: true, message: `Code sent to ${email}.`, data: { ...data, jeton } };
   } catch (err) {
     if (err instanceof TropDeDemandes) return { ...TROP_DE_CODES, data };
     console.error(err);
@@ -338,7 +339,7 @@ export async function demanderAnnulation(_prev: FormState, formData: FormData): 
   }
 }
 
-/** Étape 2 : le code reçu confirme l'annulation. */
+/** Step 2: the received code confirms the cancellation. */
 export async function annulerRendezVous(_prev: FormState, formData: FormData): Promise<FormState> {
   const verif = await verifierSaisie("annulation", formData);
   if (!verif.ok) return verif.state;
@@ -349,9 +350,9 @@ export async function annulerRendezVous(_prev: FormState, formData: FormData): P
        WHERE reference = ? AND email = ? AND statut IN ('en_attente','confirme') AND date_rdv >= CURDATE()`,
       [verif.donnees.reference, verif.email],
     );
-    if (res.affectedRows === 0) return { ok: false, message: "Ce rendez-vous ne peut plus être annulé." };
+    if (res.affectedRows === 0) return { ok: false, message: "This appointment can no longer be cancelled." };
     revalidatePath("/", "layout");
-    return { ok: true, message: "Votre rendez-vous a bien été annulé." };
+    return { ok: true, message: "Your appointment has been cancelled." };
   } catch (err) {
     console.error(err);
     return ERREUR_SERVEUR;

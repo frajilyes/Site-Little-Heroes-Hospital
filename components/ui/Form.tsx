@@ -26,7 +26,7 @@ export function Field({
 }) {
   return (
     <div className={className}>
-      <label htmlFor={name} className="mb-1.5 block text-sm font-extrabold text-encre">
+      <label htmlFor={name} className="mb-1.5 block text-sm font-semibold text-encre">
         {label}
       </label>
       {children}
@@ -38,7 +38,7 @@ export function Field({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-1 text-xs font-bold text-corail"
+            className="mt-1 text-xs font-medium text-corail"
           >
             {error}
           </m.p>
@@ -50,7 +50,7 @@ export function Field({
   );
 }
 
-/** Props communes à un input lié à l'état d'une action : valeur par défaut et accessibilité des erreurs. */
+/** Common props for an input bound to an action's state: default value and error accessibility. */
 export function bind(state: FormState, name: string) {
   return {
     id: name,
@@ -63,9 +63,9 @@ export function bind(state: FormState, name: string) {
 
 export function SubmitButton({ pending, children, className = "" }: { pending: boolean; children: ReactNode; className?: string }) {
   return (
-    <button type="submit" disabled={pending} className={`btn bg-corail text-white shadow-lg shadow-corail/30 ${className}`}>
+    <button type="submit" disabled={pending} className={`btn btn-primaire ${className}`}>
       {pending ? <Loader2 className="size-5 animate-spin" /> : null}
-      {pending ? "Envoi en cours…" : children}
+      {pending ? "Sending…" : children}
     </button>
   );
 }
@@ -80,8 +80,8 @@ export function FormAlert({ state }: { state: FormState }) {
           initial={{ opacity: 0, y: -8, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0 }}
-          className={`flex items-start gap-3 rounded-2xl p-4 text-sm font-bold ${
-            state.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"
+          className={`flex items-start gap-3 rounded-lg border p-4 text-sm font-medium ${
+            state.ok ? "border-menthe/25 bg-menthe/8 text-menthe" : "border-corail/25 bg-corail/8 text-corail"
           }`}
         >
           {state.ok ? <CheckCircle2 className="size-5 shrink-0" /> : <TriangleAlert className="size-5 shrink-0" />}
@@ -92,14 +92,22 @@ export function FormAlert({ state }: { state: FormState }) {
   );
 }
 
-/** Modale accessible rendue dans <body> (Échap pour fermer, focus initial, défilement bloqué). */
+/** Accessible modal rendered into <body> (Escape to close, initial focus, scroll locked). */
 export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+
+  // Callers pass `onClose` as an inline arrow, so its identity changes on every parent
+  // render. Reading it through a ref keeps the effect below tied to `open` alone —
+  // otherwise each re-render would re-run the cleanup and pull focus back to the trigger.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCloseRef.current();
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     const t = setTimeout(() => ref.current?.querySelector<HTMLElement>("input, select, textarea, button")?.focus(), 50);
@@ -109,14 +117,14 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
       document.body.style.overflow = "";
       prev?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (typeof document === "undefined") return null;
   return createPortal(
     <AnimatePresence>
       {open && (
         <m.div
-          className="fixed inset-0 z-50 grid place-items-end bg-encre/50 backdrop-blur-sm sm:place-items-center sm:p-4"
+          className="fixed inset-0 z-50 grid place-items-end bg-marine/55 backdrop-blur-sm sm:place-items-center sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -131,13 +139,13 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 40, opacity: 0, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-[2rem] bg-white p-6 shadow-2xl sm:max-w-lg sm:rounded-[2rem] sm:p-8"
+            className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-xl bg-white p-6 shadow-2xl sm:max-w-lg sm:rounded-xl sm:p-8"
           >
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 grid size-10 place-items-center rounded-full bg-creme transition-transform hover:rotate-90"
-              aria-label="Fermer"
+              className="absolute top-4 right-4 grid size-9 place-items-center rounded-lg text-brume transition-colors hover:bg-voile hover:text-encre"
+              aria-label="Close"
             >
               <X className="size-5" />
             </button>
@@ -150,11 +158,11 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   );
 }
 
-/** Pluie de confettis (célébration après une réservation / un don). */
+/** Confetti rain (celebration after a booking / a donation). */
 export function Confetti() {
-  const couleurs = ["#ff6b6b", "#ffc93c", "#3ccfa5", "#4aa8ff", "#9b8cff"];
+  const couleurs = ["#1668b3", "#0d8f7f", "#c8871a", "#3d8dd4", "#4a5aa8"];
   return (
-    <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden" aria-hidden>
+    <div className="pointer-events-none fixed inset-0 z-60 overflow-hidden" aria-hidden>
       {Array.from({ length: 60 }).map((_, i) => {
         const left = (i * 37) % 100;
         const delay = (i % 10) * 0.08;
