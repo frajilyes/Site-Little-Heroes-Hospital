@@ -24,8 +24,8 @@ export function AnnulationForm({ reference, annulable }: { reference: string; an
   return (
     <div className="border-t border-black/5 p-6">
       {!ouvert ? (
-        <button type="button" onClick={() => setOuvert(true)} className="text-sm font-extrabold text-corail hover:underline">
-          Annuler ce rendez-vous
+        <button type="button" onClick={() => setOuvert(true)} className="text-sm font-bold text-corail hover:underline">
+          Cancel this appointment
         </button>
       ) : jeton ? (
         <CodeEmailForm
@@ -34,19 +34,19 @@ export function AnnulationForm({ reference, annulable }: { reference: string; an
           confirmer={annulerRendezVous}
           onResult={(r) => r.ok && setFini(r)}
           onRetour={() => setJeton(null)}
-          retourLabel="← Changer d'adresse e-mail"
+          retourLabel="← Change e-mail address"
         >
-          Confirmer l&apos;annulation
+          Confirm cancellation
         </CodeEmailForm>
       ) : (
-        <form action={action} className="grid animate-pop gap-3">
+        <form action={action} className="grid animate-fade gap-3">
           <input type="hidden" name="reference" value={reference} />
-          <label htmlFor="email-annul" className="text-sm font-extrabold">
-            Saisissez l&apos;e-mail utilisé lors de la réservation : nous vous y enverrons un code de confirmation
+          <label htmlFor="email-annul" className="text-sm font-bold">
+            Enter the e-mail used for the booking: we&apos;ll send a confirmation code to it
           </label>
           <div className="flex flex-col gap-3 sm:flex-row">
             <input id="email-annul" name="email" type="email" defaultValue={state.data?.email ?? ""} required className="field" autoComplete="email" />
-            <SubmitButton pending={pending} className="shrink-0">Recevoir le code</SubmitButton>
+            <SubmitButton pending={pending} className="shrink-0">Receive the code</SubmitButton>
           </div>
           <FormAlert state={state.ok ? ETAT_INITIAL : state} />
         </form>

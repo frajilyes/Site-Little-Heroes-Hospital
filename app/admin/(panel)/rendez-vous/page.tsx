@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { Mail, Phone } from "lucide-react";
 import { getRdvParStatut, getRendezVous } from "@/lib/data";
 import { changerStatutRdv } from "@/app/actions/admin";
-import { dateJour, heure, STATUTS_RDV, toISODate } from "@/lib/format";
+import { dateJour, heure, pluriel, STATUTS_RDV, toISODate } from "@/lib/format";
 import { COULEURS } from "@/lib/theme";
 import { AdminHeader, FiltreOnglets, Recherche, Vide } from "@/components/admin/ui";
 import { StatutSelect } from "@/components/admin/Toaster";
 import type { StatutRdv } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Rendez-vous" };
+export const metadata: Metadata = { title: "Appointments" };
 
 const STATUTS = ["tous", "en_attente", "confirme", "termine", "annule"] as const;
 
@@ -22,42 +22,42 @@ export default async function AdminRdvPage({ searchParams }: PageProps<"/admin/r
 
   return (
     <>
-      <AdminHeader titre="Rendez-vous" sousTitre="Confirmez, terminez ou annulez les consultations." />
+      <AdminHeader titre="Appointments" sousTitre="Confirm, complete, or cancel consultations." />
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <FiltreOnglets
           base="/admin/rendez-vous"
           courant={statut}
           extra={q ? { q } : {}}
-          options={STATUTS.map((s) => [s, s === "tous" ? "Tous" : STATUTS_RDV[s].label, compte(s)])}
+          options={STATUTS.map((s) => [s, s === "tous" ? "All" : STATUTS_RDV[s].label, compte(s)])}
         />
-        <Recherche defaut={q} statut={statut} placeholder="Enfant, parent ou référence…" />
+        <Recherche defaut={q} statut={statut} placeholder="Child, parent, or reference…" />
       </div>
 
       {rdvs.length === 0 ? (
-        <Vide emoji="📭" texte="Aucun rendez-vous ne correspond." />
+        <Vide texte="No matching appointments." />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="border-b border-black/5 text-xs tracking-wider text-brume uppercase">
               <tr>
                 <th className="px-5 py-4">Date</th>
-                <th className="px-5 py-4">Enfant</th>
-                <th className="px-5 py-4">Médecin / service</th>
+                <th className="px-5 py-4">Child</th>
+                <th className="px-5 py-4">Doctor / department</th>
                 <th className="px-5 py-4">Contact</th>
-                <th className="px-5 py-4">Motif</th>
-                <th className="px-5 py-4">Statut</th>
+                <th className="px-5 py-4">Reason</th>
+                <th className="px-5 py-4">Status</th>
               </tr>
             </thead>
             <tbody>
               {rdvs.map((r) => (
                 <tr key={r.id} className={`border-b border-black/5 transition-colors last:border-0 hover:bg-creme/60 ${r.date_rdv === aujourdhui ? "bg-sky-50/60" : ""}`}>
                   <td className="px-5 py-4 whitespace-nowrap">
-                    <span className="block font-extrabold capitalize">{r.date_rdv === aujourdhui ? "Aujourd'hui" : dateJour(r.date_rdv)}</span>
+                    <span className="block font-bold capitalize">{r.date_rdv === aujourdhui ? "Today" : dateJour(r.date_rdv)}</span>
                     <span className="text-brume">{heure(r.heure)} · <span className="font-mono text-xs">{r.reference}</span></span>
                   </td>
                   <td className="px-5 py-4">
-                    <span className="block font-extrabold">{r.enfant_nom}</span>
-                    <span className="text-brume">{r.enfant_age} an{r.enfant_age > 1 ? "s" : ""} · {r.parent_nom}</span>
+                    <span className="block font-bold">{r.enfant_nom}</span>
+                    <span className="text-brume">{r.enfant_age} yr{pluriel(r.enfant_age)} · {r.parent_nom}</span>
                   </td>
                   <td className="px-5 py-4">
                     <span className="block font-bold">{r.medecin_nom}</span>

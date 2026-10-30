@@ -1,24 +1,34 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
+import { VISUELS } from "@/lib/images";
 import { PageHero } from "@/components/site/PageHero";
 import { Blagues, Dessin, Memory } from "@/components/site/Jeux";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/motion";
 
 export const metadata: Metadata = {
-  title: "Espace enfants",
-  description: "Jeux, dessin et blagues pour les petits héros hospitalisés.",
+  title: "Kids' Corner",
+  description: "Games, drawing, and jokes for little heroes in the hospital.",
 };
 
 const MOTS = [
-  { e: "💉", m: "La piqûre", d: "Ça pique un tout petit peu, comme une fourmi. Tu peux serrer la main de papa ou maman très fort !" },
-  { e: "🩻", m: "La radio", d: "Un appareil photo magique qui voit à travers ta peau pour regarder tes os. Ça ne fait pas mal du tout." },
-  { e: "😴", m: "L'anesthésie", d: "Un médicament qui te fait faire un gros dodo pendant que le docteur te soigne. Tu ne sens rien !" },
-  { e: "🩺", m: "Le stéthoscope", d: "Les oreilles magiques du docteur pour écouter ton cœur faire boum-boum." },
+  { e: "💉", m: "The shot", d: "It stings just a tiny bit, like an ant bite. You can squeeze mom or dad's hand really hard!" },
+  { e: "🩻", m: "The X-ray", d: "A magic camera that sees through your skin to look at your bones. It doesn't hurt at all." },
+  { e: "😴", m: "Anesthesia", d: "A medicine that gives you a big nap while the doctor takes care of you. You don't feel a thing!" },
+  { e: "🩺", m: "The stethoscope", d: "The doctor's magic ears for listening to your heart go thump-thump." },
 ];
 
-export default function EspaceEnfantsPage() {
+export default async function EspaceEnfantsPage() {
+  // Rendered per request so the CSP nonce exists (see proxy.ts).
+  await connection();
   return (
     <>
-      <PageHero emoji="🦸" badge="Pour les 4 – 12 ans" titre="L'espace des petits héros" sousTitre="Des jeux pour s'amuser, un atelier dessin et plein de blagues. Et si on rigolait un peu ?" ton="lavande" />
+      <PageHero
+        photo={VISUELS.espaceEnfants}
+        icone="dices"
+        badge="For ages 4 – 12"
+        titre="The little heroes' corner"
+        sousTitre="Games, a drawing workshop, jokes, and a dictionary to understand the doctors' words."
+      />
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-2">
         <Reveal><Memory /></Reveal>
         <Reveal delay={0.1}><Dessin /></Reveal>
@@ -27,14 +37,14 @@ export default function EspaceEnfantsPage() {
         <Reveal><Blagues /></Reveal>
       </section>
       <section className="mx-auto max-w-7xl px-4 py-16">
-        <h2 className="text-center text-3xl font-semibold">📖 Le petit dictionnaire de l&apos;hôpital</h2>
-        <p className="mt-2 text-center text-brume">Les mots des docteurs expliqués aux enfants</p>
+        <h2 className="text-center text-3xl font-bold">The hospital’s little dictionary</h2>
+        <p className="mt-2 text-center text-brume">The doctors’ words, explained to kids</p>
         <Stagger className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {MOTS.map((x) => (
-            <StaggerItem key={x.m} className="group card p-6 text-center transition-transform hover:-translate-y-1 hover:rotate-1">
-              <div className="text-5xl transition-transform group-hover:scale-125">{x.e}</div>
-              <h3 className="mt-3 text-xl font-semibold">{x.m}</h3>
-              <p className="mt-2 text-sm text-brume">{x.d}</p>
+            <StaggerItem key={x.m} className="group card p-6 text-center">
+              <div className="text-4xl transition-transform group-hover:scale-110">{x.e}</div>
+              <h3 className="mt-3 text-lg font-bold">{x.m}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-brume">{x.d}</p>
             </StaggerItem>
           ))}
         </Stagger>

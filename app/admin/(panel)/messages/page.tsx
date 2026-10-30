@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Mail, MailOpen, Reply, Trash2 } from "lucide-react";
 import { getMessages } from "@/lib/data";
 import { marquerMessage, supprimerMessage } from "@/app/actions/admin";
-import { ilYA } from "@/lib/format";
+import { ilYA, pluriel } from "@/lib/format";
 import { AdminHeader, Vide } from "@/components/admin/ui";
 import { ActionButton } from "@/components/admin/Toaster";
 
@@ -14,9 +14,9 @@ export default async function MessagesPage() {
 
   return (
     <>
-      <AdminHeader titre="Messages" sousTitre={nonLus ? `${nonLus} message${nonLus > 1 ? "s" : ""} non lu${nonLus > 1 ? "s" : ""}` : "Tout est lu."} />
+      <AdminHeader titre="Messages" sousTitre={nonLus ? `${nonLus} unread message${pluriel(nonLus)}` : "All read."} />
       {messages.length === 0 ? (
-        <Vide emoji="📭" texte="Aucun message." />
+        <Vide texte="No messages." />
       ) : (
         <ul className="grid gap-3">
           {messages.map((x) => (
@@ -24,7 +24,7 @@ export default async function MessagesPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 font-display text-lg font-semibold">
-                    {!x.lu && <span className="size-2.5 rounded-full bg-corail" aria-label="Non lu" />}
+                    {!x.lu && <span className="size-2.5 rounded-full bg-corail" aria-label="Unread" />}
                     {x.sujet}
                   </p>
                   <p className="text-sm text-brume">
@@ -32,13 +32,13 @@ export default async function MessagesPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <a href={`mailto:${x.email}?subject=${encodeURIComponent("Re : " + x.sujet)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-100 px-3 py-2 text-xs font-extrabold text-sky-800 transition-transform hover:-translate-y-0.5">
-                    <Reply className="size-4" /> Répondre
+                  <a href={`mailto:${x.email}?subject=${encodeURIComponent("Re: " + x.sujet)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-sky-100 px-3 py-2 text-xs font-bold text-sky-800 transition-transform hover:-translate-y-0.5">
+                    <Reply className="size-4" /> Reply
                   </a>
-                  <ActionButton action={marquerMessage.bind(null, x.id, !x.lu)} title={x.lu ? "Marquer non lu" : "Marquer lu"} className="bg-creme text-encre">
+                  <ActionButton action={marquerMessage.bind(null, x.id, !x.lu)} title={x.lu ? "Mark unread" : "Mark read"} className="bg-creme text-encre">
                     {x.lu ? <Mail className="size-4" /> : <MailOpen className="size-4" />}
                   </ActionButton>
-                  <ActionButton action={supprimerMessage.bind(null, x.id)} confirmer="Supprimer ce message ?" title="Supprimer" className="bg-rose-50 text-rose-600">
+                  <ActionButton action={supprimerMessage.bind(null, x.id)} confirmer="Delete this message?" title="Delete" className="bg-rose-50 text-rose-600">
                     <Trash2 className="size-4" />
                   </ActionButton>
                 </div>

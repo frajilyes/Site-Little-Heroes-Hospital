@@ -15,10 +15,10 @@ export function AdmissionButton({ services, medecins }: { services: Option[]; me
   const [cle, setCle] = useState(0);
   return (
     <>
-      <button type="button" onClick={() => { setCle((k) => k + 1); setOuvert(true); }} className="btn bg-corail text-white shadow-lg shadow-corail/30">
-        <UserPlus className="size-4" /> Nouvelle admission
+      <button type="button" onClick={() => { setCle((k) => k + 1); setOuvert(true); }} className="btn btn-primaire">
+        <UserPlus className="size-4" /> New admission
       </button>
-      <Modal open={ouvert} onClose={() => setOuvert(false)} title="Nouvelle admission">
+      <Modal open={ouvert} onClose={() => setOuvert(false)} title="New admission">
         <AdmissionForm key={cle} services={services} medecins={medecins} onDone={() => setOuvert(false)} />
       </Modal>
     </>
@@ -31,7 +31,9 @@ function AdmissionForm({ services, medecins, onDone }: { services: Option[]; med
     if (res.ok) toast(res);
     return res;
   }, ETAT_INITIAL);
-  const [serviceId, setServiceId] = useState(Number(state.data?.service_id) || services[0]?.id);
+  // 0 when no department exists yet: a bare `services[0]?.id` is undefined, which flips the
+  // select below from controlled to uncontrolled on the first keystroke.
+  const [serviceId, setServiceId] = useState(Number(state.data?.service_id) || services[0]?.id || 0);
 
   useEffect(() => {
     if (state.ok) onDone();
@@ -39,31 +41,37 @@ function AdmissionForm({ services, medecins, onDone }: { services: Option[]; med
 
   return (
     <form action={action} className="grid gap-4" noValidate>
-      <h2 className="pr-10 text-2xl font-semibold">Nouvelle admission</h2>
+      <h2 className="pr-10 text-2xl font-semibold">New admission</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Prénom" name="prenom" error={state.errors?.prenom}><input {...bind(state, "prenom")} className="field" /></Field>
-        <Field label="Nom" name="nom" error={state.errors?.nom}><input {...bind(state, "nom")} className="field" /></Field>
+        <Field label="First name" name="prenom" error={state.errors?.prenom}><input {...bind(state, "prenom")} className="field" /></Field>
+        <Field label="Last name" name="nom" error={state.errors?.nom}><input {...bind(state, "nom")} className="field" /></Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Naissance" name="date_naissance" error={state.errors?.date_naissance}><input {...bind(state, "date_naissance")} type="date" className="field" /></Field>
-        <Field label="Sexe" name="sexe" error={state.errors?.sexe}>
-          <select {...bind(state, "sexe")} className="field"><option value="F">Fille</option><option value="M">Garçon</option></select>
+        <Field label="Date of birth" name="date_naissance" error={state.errors?.date_naissance}><input {...bind(state, "date_naissance")} type="date" className="field" /></Field>
+        <Field label="Sex" name="sexe" error={state.errors?.sexe}>
+          <select {...bind(state, "sexe")} className="field"><option value="F">Girl</option><option value="M">Boy</option></select>
         </Field>
-        <Field label="Groupe sanguin" name="groupe_sanguin" error={state.errors?.groupe_sanguin}>
+        <Field label="Blood type" name="groupe_sanguin" error={state.errors?.groupe_sanguin}>
           <select {...bind(state, "groupe_sanguin")} className="field">
-            <option value="">Inconnu</option>
+            <option value="">Unknown</option>
             {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((g) => <option key={g}>{g}</option>)}
           </select>
         </Field>
       </div>
-      <Field label="Allergies" name="allergies" error={state.errors?.allergies}><input {...bind(state, "allergies")} className="field" placeholder="Aucune" /></Field>
+      <Field label="Allergies" name="allergies" error={state.errors?.allergies}><input {...bind(state, "allergies")} className="field" placeholder="None" /></Field>
+      {services.length === 0 && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          No department is registered yet, so a patient cannot be assigned to one. Add the
+          hospital&rsquo;s departments before admitting anyone.
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Service" name="service_id" error={state.errors?.service_id}>
+        <Field label="Department" name="service_id" error={state.errors?.service_id}>
           <select id="service_id" name="service_id" value={serviceId} onChange={(e) => setServiceId(Number(e.target.value))} className="field">
             {services.map((s) => <option key={s.id} value={s.id}>{s.nom}</option>)}
           </select>
         </Field>
-        <Field label="Médecin référent" name="medecin_id" error={state.errors?.medecin_id}>
+        <Field label="Attending doctor" name="medecin_id" error={state.errors?.medecin_id}>
           <select id="medecin_id" name="medecin_id" key={serviceId} className="field">
             <option value="">—</option>
             {medecins.filter((d) => d.service_id === serviceId).map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}
@@ -71,18 +79,18 @@ function AdmissionForm({ services, medecins, onDone }: { services: Option[]; med
         </Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Chambre" name="chambre" error={state.errors?.chambre}><input {...bind(state, "chambre")} className="field" /></Field>
-        <Field label="Statut" name="statut" error={state.errors?.statut}>
-          <select {...bind(state, "statut")} className="field"><option value="hospitalise">Hospitalisé</option><option value="observation">Observation</option></select>
+        <Field label="Room" name="chambre" error={state.errors?.chambre}><input {...bind(state, "chambre")} className="field" /></Field>
+        <Field label="Status" name="statut" error={state.errors?.statut}>
+          <select {...bind(state, "statut")} className="field"><option value="hospitalise">Hospitalized</option><option value="observation">Observation</option></select>
         </Field>
-        <Field label="Sortie prévue" name="date_sortie_prevue" error={state.errors?.date_sortie_prevue}><input {...bind(state, "date_sortie_prevue")} type="date" className="field" /></Field>
+        <Field label="Expected discharge" name="date_sortie_prevue" error={state.errors?.date_sortie_prevue}><input {...bind(state, "date_sortie_prevue")} type="date" className="field" /></Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Parent / tuteur" name="parent_nom" error={state.errors?.parent_nom}><input {...bind(state, "parent_nom")} className="field" /></Field>
-        <Field label="Téléphone" name="parent_tel" error={state.errors?.parent_tel}><input {...bind(state, "parent_tel")} type="tel" className="field" /></Field>
+        <Field label="Parent / guardian" name="parent_nom" error={state.errors?.parent_nom}><input {...bind(state, "parent_nom")} className="field" /></Field>
+        <Field label="Phone" name="parent_tel" error={state.errors?.parent_tel}><input {...bind(state, "parent_tel")} type="tel" className="field" /></Field>
       </div>
       {!state.ok && <FormAlert state={state} />}
-      <SubmitButton pending={pending} className="w-full">Admettre le patient</SubmitButton>
+      <SubmitButton pending={pending} className="w-full">Admit patient</SubmitButton>
     </form>
   );
 }

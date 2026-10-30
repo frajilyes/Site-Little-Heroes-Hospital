@@ -13,7 +13,7 @@ import { CodeEmailForm } from "./CodeEmailForm";
 import { CRENEAUX } from "@/lib/constants";
 import { COULEURS } from "@/lib/theme";
 import { portraitParDefaut, src } from "@/lib/images";
-import { dateLongue, heure as fmtHeure, parseDate, toISODate } from "@/lib/format";
+import { dateLongue, heure as fmtHeure, parseDate, pluriel, toISODate } from "@/lib/format";
 import type { FormState, Medecin, Service } from "@/lib/types";
 
 const ETAPES = ["Department", "Doctor", "Time slot", "Your info"];
@@ -383,7 +383,7 @@ function Creneaux({ medecinId, date, choisi, onChoisir }: { medecinId: number; d
   return (
     <div className="mt-6">
       <p className="mb-3 text-sm font-bold text-brume">
-        {libres} time slot{libres === 1 ? "" : "s"} available
+        {libres} time slot{pluriel(libres)} available
       </p>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
         {CRENEAUX.map((h, i) => {

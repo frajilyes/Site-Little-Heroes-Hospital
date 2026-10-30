@@ -1,57 +1,65 @@
 import type { Metadata } from "next";
-import { Bus, Car, Clock, Coffee, Train, Wifi } from "lucide-react";
+import { connection } from "next/server";
+import { Bus, Car, Check, Clock, Coffee, Train, Wifi } from "lucide-react";
+import { VISUELS } from "@/lib/images";
 import { PageHero, SectionTitle } from "@/components/site/PageHero";
 import { Faq } from "@/components/site/Faq";
 import { Reveal, Stagger, StaggerItem } from "@/components/ui/motion";
 
 export const metadata: Metadata = {
-  title: "Infos pratiques",
-  description: "Horaires de visite, accès, valise d'hospitalisation, services aux familles et questions fréquentes.",
+  title: "Practical Info",
+  description: "Visiting hours, access, hospital bag checklist, services for families, and frequently asked questions.",
 };
 
 const HORAIRES = [
-  { qui: "Parents", quand: "24h/24", detail: "Un parent peut dormir dans la chambre (lit accompagnant).", e: "👨‍👩‍👧" },
-  { qui: "Frères & sœurs", quand: "12h – 20h", detail: "Dès 3 ans, en l'absence de maladie contagieuse.", e: "🧒" },
-  { qui: "Famille & amis", quand: "14h – 20h", detail: "2 visiteurs maximum à la fois par chambre.", e: "👵" },
-  { qui: "Urgences", quand: "24h/24", detail: "Un seul accompagnant auprès de l'enfant.", e: "🚑" },
+  { qui: "Parents", quand: "24/7", detail: "A parent can sleep in the room (a companion bed is provided)." },
+  { qui: "Siblings", quand: "12pm – 8pm", detail: "From age 3, provided there's no contagious illness." },
+  { qui: "Family and friends", quand: "2pm – 8pm", detail: "Two visitors maximum at a time per room." },
+  { qui: "Emergency", quand: "24/7", detail: "Only one companion is allowed with the child." },
 ];
 
 const VALISE = [
-  ["🧸", "Son doudou préféré"],
-  ["👕", "Pyjamas et vêtements confortables"],
-  ["🪥", "Trousse de toilette"],
-  ["🩴", "Chaussons"],
-  ["📒", "Carnet de santé"],
-  ["💳", "Carte Vitale & mutuelle"],
-  ["📚", "Livres, jeux, tablette"],
-  ["🔌", "Chargeur de téléphone"],
+  "A comfort toy or blanket",
+  "Pajamas and comfortable clothes",
+  "Toiletries bag",
+  "Non-slip slippers",
+  "Health record booklet",
+  "Insurance card and proof of coverage",
+  "Books, games, tablet",
+  "Phone charger",
 ];
 
 const FAQ = [
-  { q: "Puis-je rester dormir auprès de mon enfant ?", r: "Oui ! Chaque chambre dispose d'un lit accompagnant pour un parent. Une Maison des parents est également disponible à 200 m pour les familles venant de loin." },
-  { q: "Mon enfant peut-il continuer l'école ?", r: "Oui, l'école à l'hôpital accueille les enfants de la maternelle au lycée, en classe ou en chambre. Les enseignants sont en lien avec l'école habituelle." },
-  { q: "Comment se passe une opération ?", r: "Une visite du bloc est proposée avant l'intervention. Le jour J, votre enfant peut descendre en petite voiture électrique et vous l'accompagnez jusqu'à l'endormissement." },
-  { q: "Les repas sont-ils adaptés aux allergies ?", r: "Absolument. Nos diététiciennes adaptent tous les repas aux allergies, régimes et préférences culturelles. Signalez-les dès l'admission." },
-  { q: "Comment inscrire mon enfant aux activités ?", r: "Directement depuis la page Activités du site, ou auprès de l'équipe d'animation dans le service. Toutes les activités sont gratuites." },
-  { q: "Que faire en cas d'urgence la nuit ?", r: "Appelez le 15 ou venez directement aux urgences pédiatriques (rez-de-chaussée, aile A), ouvertes 24h/24 et 7j/7." },
+  { q: "Can I stay and sleep next to my child?", r: "Yes! Every room has a companion bed for one parent. A Parents' House is also available 200 m away for families coming from afar." },
+  { q: "Can my child keep up with school?", r: "Yes, the hospital school welcomes children from preschool through high school, in a classroom or in their room. Teachers stay in touch with the child's regular school." },
+  { q: "What happens during an operation?", r: "A tour of the operating ward is offered before the procedure. On the day, your child can ride down in a little electric car, and you stay with them until they fall asleep." },
+  { q: "Are meals suited to allergies?", r: "Absolutely. Our dietitians adapt every meal to allergies, special diets, and cultural preferences. Let us know at admission." },
+  { q: "How do I sign my child up for activities?", r: "Directly from the Activities page on the site, or with the activities team in the department. All activities are free." },
+  { q: "What should I do in a night-time emergency?", r: "Call 15 or come directly to the pediatric emergency department (ground floor, wing A), open 24/7." },
 ];
 
-export default function InfosPage() {
+export default async function InfosPage() {
+  // Rendered per request so the CSP nonce exists (see proxy.ts).
+  await connection();
   return (
     <>
-      <PageHero emoji="🧭" titre="Infos pratiques" sousTitre="Tout ce qu'il faut savoir pour préparer votre venue et rendre le séjour plus doux." ton="menthe" />
+      <PageHero
+        photo={VISUELS.infosPratiques}
+        icone="map-pin"
+        titre="Practical information"
+        sousTitre="Visiting hours, access, what to bring, and answers to the most frequently asked questions."
+      />
 
       <section className="mx-auto max-w-7xl px-4 py-16">
-        <Reveal><SectionTitle kicker="Visites" titre="Horaires de visite" /></Reveal>
+        <Reveal><SectionTitle kicker="Visits" titre="Visiting hours" /></Reveal>
         <Stagger className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {HORAIRES.map((h) => (
-            <StaggerItem key={h.qui} className="card p-6 text-center">
-              <div className="text-4xl">{h.e}</div>
-              <h3 className="mt-3 text-lg font-semibold">{h.qui}</h3>
-              <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 font-display font-semibold text-emerald-700">
+            <StaggerItem key={h.qui} className="card p-6">
+              <h3 className="text-[17px] font-bold">{h.qui}</h3>
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-azur/10 px-2.5 py-1 font-display text-sm font-bold text-azur">
                 <Clock className="size-4" /> {h.quand}
               </p>
-              <p className="mt-3 text-sm text-brume">{h.detail}</p>
+              <p className="mt-3 text-sm leading-relaxed text-brume">{h.detail}</p>
             </StaggerItem>
           ))}
         </Stagger>
@@ -60,29 +68,29 @@ export default function InfosPage() {
       <section className="bg-white py-16">
         <div className="mx-auto grid max-w-7xl gap-12 px-4 lg:grid-cols-2">
           <Reveal>
-            <SectionTitle center={false} kicker="Préparer le séjour" titre="La valise du petit héros" texte="Une petite liste pour ne rien oublier — et surtout pas le doudou !" />
-            <ul className="mt-8 grid grid-cols-2 gap-3">
-              {VALISE.map(([e, t]) => (
-                <li key={t} className="flex items-center gap-3 rounded-2xl bg-creme p-3 text-sm font-bold transition-transform hover:-translate-y-0.5 hover:rotate-[-1deg]">
-                  <span className="text-2xl">{e}</span> {t}
+            <SectionTitle center={false} kicker="Preparing for the stay" titre="What to bring" texte="A checklist so nothing gets forgotten — starting with the child's comfort item." />
+            <ul className="mt-8 grid gap-2 sm:grid-cols-2">
+              {VALISE.map((t) => (
+                <li key={t} className="flex items-start gap-2.5 text-sm text-encre">
+                  <Check className="mt-0.5 size-4 shrink-0 text-menthe" /> {t}
                 </li>
               ))}
             </ul>
           </Reveal>
           <Reveal delay={0.1}>
-            <SectionTitle center={false} kicker="Accès" titre="Venir à l'hôpital" />
+            <SectionTitle center={false} kicker="Access" titre="Getting to the hospital" />
             <div className="mt-8 grid gap-3">
               {[
-                { i: <Train className="size-5" />, t: "Métro", d: "Ligne 7 — station Petits-Héros (sortie 2)" },
-                { i: <Bus className="size-5" />, t: "Bus", d: "Lignes 21, 47 et 83 — arrêt Hôpital" },
-                { i: <Car className="size-5" />, t: "Parking", d: "Gratuit pour les parents d'enfants hospitalisés" },
-                { i: <Coffee className="size-5" />, t: "Cafétéria", d: "Rez-de-chaussée, de 7h à 21h" },
-                { i: <Wifi className="size-5" />, t: "Wi-Fi", d: "Gratuit dans tout l'hôpital (réseau « PetitsHeros »)" },
+                { i: <Train className="size-5" />, t: "Subway", d: "Line 7 — Little Heroes station (exit 2)" },
+                { i: <Bus className="size-5" />, t: "Bus", d: "Lines 21, 47, and 83 — Hospital stop" },
+                { i: <Car className="size-5" />, t: "Parking", d: "Free for parents of hospitalized children" },
+                { i: <Coffee className="size-5" />, t: "Cafeteria", d: "Ground floor, 7am to 9pm" },
+                { i: <Wifi className="size-5" />, t: "Wi-Fi", d: "Free throughout the hospital (network \"LittleHeroes\")" },
               ].map((x) => (
-                <div key={x.t} className="flex items-center gap-4 rounded-2xl bg-creme p-4">
-                  <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-menthe shadow-sm">{x.i}</span>
-                  <span>
-                    <span className="block font-extrabold">{x.t}</span>
+                <div key={x.t} className="flex items-center gap-4 rounded-lg border border-bord bg-creme p-4">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-white text-azur">{x.i}</span>
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-semibold">{x.t}</span>
                     <span className="block text-sm text-brume">{x.d}</span>
                   </span>
                 </div>
@@ -93,7 +101,7 @@ export default function InfosPage() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 py-16">
-        <Reveal><SectionTitle kicker="FAQ" titre="Questions fréquentes" /></Reveal>
+        <Reveal><SectionTitle kicker="FAQ" titre="Frequently asked questions" /></Reveal>
         <div className="mt-10">
           <Faq items={FAQ} />
         </div>

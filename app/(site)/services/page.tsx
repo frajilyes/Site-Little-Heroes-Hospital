@@ -1,44 +1,50 @@
 import type { Metadata } from "next";
 import { getServices } from "@/lib/data";
+import { pluriel } from "@/lib/format";
+import { VISUELS } from "@/lib/images";
 import { ServiceCard } from "@/components/site/Cards";
 import { PageHero } from "@/components/site/PageHero";
 import { Stagger, StaggerItem } from "@/components/ui/motion";
 
 export const metadata: Metadata = {
-  title: "Nos services",
-  description: "Urgences, néonatologie, cardiologie, chirurgie, hémato-oncologie, neurologie, pneumologie et pédopsychiatrie.",
+  title: "Our Departments",
+  description: "The hospital's specialized departments, from birth to adolescence.",
 };
 
 export default async function ServicesPage() {
   const services = await getServices();
   const lits = services.reduce((n, s) => n + s.lits_total, 0);
   const occupes = services.reduce((n, s) => n + s.lits_occupes, 0);
+  const taux = lits ? Math.round((occupes / lits) * 100) : 0;
 
   return (
     <>
       <PageHero
-        emoji="🏥"
-        badge={`${services.length} services · ${lits} lits`}
-        titre="Nos services spécialisés"
-        sousTitre="De la naissance à l'adolescence, des équipes expertes et bienveillantes prennent soin de votre enfant."
-        ton="ciel"
+        photo={VISUELS.services}
+        icone="stethoscope"
+        badge={services.length ? `${services.length} department${pluriel(services.length)} · ${lits} beds` : undefined}
+        titre="Our specialized departments"
+        sousTitre="From birth to adolescence, expert teams brought together on a single hospital site."
       >
-        <div className="mx-auto mt-8 flex max-w-md items-center gap-4 rounded-2xl bg-white/80 p-4 text-left backdrop-blur">
-          <span className="text-3xl">🛏️</span>
-          <div className="flex-1">
-            <p className="text-sm font-extrabold">Occupation actuelle des lits</p>
-            <div className="mt-2 h-3 overflow-hidden rounded-full bg-sky-100">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-sky-400 to-ciel transition-all"
-                style={{ width: `${Math.round((occupes / lits) * 100)}%` }}
-              />
+        {lits > 0 && (
+          <div className="mt-10 max-w-md border-t border-white/20 pt-6">
+            <p className="flex items-center justify-between text-[13px] font-medium text-white/75">
+              <span>Real-time bed occupancy</span>
+              <span className="font-display font-bold text-white">
+                {occupes}/{lits} · {taux} %
+              </span>
+            </p>
+            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/20">
+              <div className="h-full rounded-full bg-ciel" style={{ width: `${taux}%` }} />
             </div>
           </div>
-          <span className="font-display text-xl font-semibold">{Math.round((occupes / lits) * 100)}%</span>
-        </div>
+        )}
       </PageHero>
-      <section className="mx-auto max-w-7xl px-4 py-16">
-        <Stagger className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mx-auto max-w-7xl px-4 py-14">
+        {services.length === 0 && (
+          <p className="card p-10 text-center text-brume">No departments are registered yet.</p>
+        )}
+        <Stagger className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((s) => (
             <StaggerItem key={s.id}>
               <ServiceCard service={s} />

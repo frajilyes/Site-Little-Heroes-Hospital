@@ -1,19 +1,28 @@
 import Link from "next/link";
-import { Balloon, Clouds } from "@/components/site/Decor";
+import { connection } from "next/server";
+import { ArrowLeft, Phone } from "lucide-react";
 
-export default function NotFound() {
+export default async function NotFound() {
+  // Rendered per request so the CSP nonce exists (see proxy.ts). This page answers every
+  // unmatched URL, so it is the one the strict policy would most visibly break.
+  await connection();
   return (
-    <main className="relative grid flex-1 place-items-center overflow-hidden bg-gradient-to-b from-sky-200 to-creme px-4 py-24 text-center">
-      <Clouds />
-      <Balloon color="#ff6b6b" className="absolute top-20 left-[15%] w-12" />
-      <Balloon color="#ffc93c" className="absolute right-[15%] bottom-24 w-10" delay="-2s" />
-      <div className="relative">
-        <p className="font-display text-[8rem] leading-none font-semibold text-white drop-shadow-[0_6px_0_rgb(30_42_74/0.15)] sm:text-[11rem]">404</p>
-        <h1 className="mt-2 text-3xl font-semibold">Cette page s&apos;est envolée !</h1>
-        <p className="mt-2 text-brume">Comme un ballon… Elle n&apos;existe pas ou a été déplacée.</p>
-        <Link href="/" className="btn mt-8 bg-corail text-white shadow-lg shadow-corail/30">
-          Retour à l&apos;accueil
-        </Link>
+    <main className="grid flex-1 place-items-center px-4 py-28">
+      <div className="max-w-lg text-center">
+        <p className="eyebrow">Error 404</p>
+        <h1 className="mt-3 text-4xl font-bold text-balance">This page does not exist</h1>
+        <p className="mt-3 leading-relaxed text-brume">
+          The address you entered is incorrect, or the page has moved. You can go back to the
+          homepage or contact the switchboard if you were looking for specific information.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link href="/" className="btn btn-primaire">
+            <ArrowLeft className="size-4" /> Back to home
+          </Link>
+          <a href="tel:0123456700" className="btn btn-secondaire">
+            <Phone className="size-4" /> 01 23 45 67 00
+          </a>
+        </div>
       </div>
     </main>
   );

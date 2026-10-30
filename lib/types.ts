@@ -15,6 +15,7 @@ export interface Service {
   accroche: string;
   description: string;
   icone: string;
+  photo: string | null;
   couleur: Couleur;
   etage: string;
   telephone: string;
@@ -37,7 +38,7 @@ export interface Medecin {
   bio: string;
   experience_ans: number;
   langues: string;
-  avatar: string;
+  photo: string | null;
   disponible: number;
 }
 
@@ -67,7 +68,7 @@ export interface Activite {
   animateur: string;
   emoji: string;
   actif: number;
-  /** inscrits pour la prochaine séance */
+  /** registered for the next session */
   inscrits: number;
   prochaine_date: string;
 }
@@ -79,7 +80,7 @@ export interface Actualite {
   resume: string;
   contenu: string;
   categorie: string;
-  emoji: string;
+  image: string | null;
   couleur: Couleur;
   date_pub: string;
 }
@@ -90,7 +91,6 @@ export interface Temoignage {
   role: string;
   texte: string;
   note: number;
-  avatar: string;
 }
 
 export type StatutRdv = "en_attente" | "confirme" | "annule" | "termine";
@@ -163,7 +163,7 @@ export interface Inscription {
   created_at: string;
 }
 
-/** État renvoyé par les Server Actions de formulaire (useActionState). */
+/** State returned by form Server Actions (useActionState). */
 export interface FormState {
   ok: boolean;
   message: string;

@@ -4,7 +4,7 @@ import { LazyMotion, MotionConfig, domMax, useInView, animate } from "motion/rea
 import * as m from "motion/react-m";
 import { useEffect, useRef, type ReactNode } from "react";
 
-/** Charge uniquement les fonctionnalités d'animation utilisées (bundle allégé) et respecte « réduire les animations ». */
+/** Loads only the animation features actually used (lighter bundle) and respects "reduce motion". */
 export function MotionProvider({ children }: { children: ReactNode }) {
   return (
     <LazyMotion features={domMax} strict>
@@ -22,7 +22,7 @@ type RevealProps = {
   as?: "div" | "section" | "li" | "article";
 };
 
-/** Apparition douce au défilement. */
+/** Smooth reveal on scroll. */
 export function Reveal({ children, className, delay = 0, y = 28, x = 0, as = "div" }: RevealProps) {
   const Comp = m[as];
   return (
@@ -38,7 +38,7 @@ export function Reveal({ children, className, delay = 0, y = 28, x = 0, as = "di
   );
 }
 
-/** Conteneur dont les enfants <StaggerItem> apparaissent en cascade. */
+/** Container whose <StaggerItem> children appear in cascade. */
 export function Stagger({ children, className, gap = 0.08 }: { children: ReactNode; className?: string; gap?: number }) {
   return (
     <m.div
@@ -67,14 +67,14 @@ export function StaggerItem({ children, className }: { children: ReactNode; clas
   );
 }
 
-/** Compteur animé de 0 à `value` quand il devient visible. */
+/** Counter animated from 0 to `value` when it becomes visible. */
 export function CountUp({ value, suffix = "", duration = 1.8 }: { value: number; suffix?: string; duration?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
   useEffect(() => {
     if (!inView || !ref.current) return;
     const el = ref.current;
-    const fmt = new Intl.NumberFormat("fr-FR");
+    const fmt = new Intl.NumberFormat("en-GB");
     const controls = animate(0, value, {
       duration,
       ease: [0.22, 1, 0.36, 1],
@@ -96,7 +96,7 @@ type AppearProps = {
   as?: "div" | "p" | "h1" | "ul" | "span";
 };
 
-/** Apparition au montage (utilisable depuis un Server Component, contrairement à `m.*`). */
+/** Appear on mount (usable from a Server Component, unlike `m.*`). */
 export function Appear({ children, className, delay = 0, y = 20, scale = 1, rotate = 0, spring = false, as = "div" }: AppearProps) {
   const Comp = m[as];
   return (
@@ -111,7 +111,7 @@ export function Appear({ children, className, delay = 0, y = 20, scale = 1, rota
   );
 }
 
-/** Trait SVG qui se dessine. */
+/** SVG line that draws itself. */
 export function DrawPath(props: { d: string; stroke: string; strokeWidth: number; delay?: number }) {
   return (
     <m.path

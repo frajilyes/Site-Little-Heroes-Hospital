@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { execute, queryOne } from "./db";
 import { mailCode, sendMail } from "./mail";
-import { signToken, verifyToken } from "./session";
+import { secret, signToken, verifyToken } from "./session";
 
 // Confirmation codes sent to families (booking and cancelling an appointment).
 // The browser only keeps a signed token; the pending data stays in the database.
@@ -13,6 +13,7 @@ export const CODE_DURATION_MIN = 15;
 export const RESEND_DELAY_S = 60;
 const MAX_ATTEMPTS = 5;
 const MAX_CODES_PAR_HEURE = 5; // per e-mail address: prevents using the site to spam
+const MAX_RENVOIS = 3; // per request: see renvoyerCode
 
 const LIBELLES: Record<ObjetCode, string> = {
   rdv: "confirm your appointment request",
@@ -28,7 +29,7 @@ interface Jeton {
 export class TropDeDemandes extends Error {}
 
 const hashCode = (id: number, code: string) =>
-  createHmac("sha256", process.env.SESSION_SECRET ?? "").update(`email:${id}:${code}`).digest("hex");
+  createHmac("sha256", secret()).update(`email:${id}:${code}`).digest("hex");
 
 const nouveauCode = () => randomInt(0, 1_000_000).toString().padStart(6, "0");
 
@@ -66,7 +67,14 @@ export async function creerCode(objet: ObjetCode, email: string, donnees: Record
   return signToken("code-email", { id, objet, exp: Math.floor(Date.now() / 1000) + 60 * 60 });
 }
 
-/** Sends a new code for the same request. Returns the number of seconds to wait (0 = sent). */
+/**
+ * Sends a new code for the same request. Returns the number of seconds to wait (0 = sent).
+ *
+ * Resends are counted on the row and capped. They rewrite `created_at`, which is what the
+ * hourly ceiling per address counts from, and they add no row for it to count — so without
+ * a counter of their own one accepted request would be a standing permission to mail that
+ * address once a minute for as long as the token lives.
+ */
 export async function renvoyerCode(jeton: string): Promise<number> {
   const j = await verifyToken<Jeton>("code-email", jeton);
   if (!j) throw new Error("Invalid token");
@@ -76,6 +84,12 @@ export async function renvoyerCode(jeton: string): Promise<number> {
   );
   if (!row) throw new Error("Request not found");
   if (Number(row.attente) > 0) return Number(row.attente);
+  // Read and incremented in one statement: two parallel clicks cannot both get through.
+  const res = await execute("UPDATE codes_email SET renvois = renvois + 1 WHERE id = ? AND renvois < ?", [
+    j.id,
+    MAX_RENVOIS,
+  ]);
+  if (res.affectedRows === 0) throw new TropDeDemandes();
   await envoyer(j.id, j.objet, row.email);
   return 0;
 }

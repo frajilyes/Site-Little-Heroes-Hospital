@@ -13,17 +13,15 @@ export function LoginForm({ from }: { from: string }) {
       <Field label="E-mail" name="email">
         <input id="email" name="email" type="email" defaultValue={state.data?.email ?? ""} className="field" autoComplete="username" required />
       </Field>
-      <Field label="Mot de passe" name="password">
+      <Field label="Password" name="password">
         <input id="password" name="password" type="password" className="field" autoComplete="current-password" required />
       </Field>
       <FormAlert state={state} />
       <SubmitButton pending={pending} className="w-full">
-        <LogIn className="size-4" /> Se connecter
+        <LogIn className="size-4" /> Log in
       </SubmitButton>
-      <p className="rounded-2xl bg-creme p-3 text-center text-xs text-brume">
-        Démo : <strong>admin@petitsheros.fr</strong> / <strong>Admin123!</strong>
-        <br />
-        Un code de vérification sera ensuite envoyé par e-mail.
+      <p className="rounded-lg bg-creme p-3 text-center text-xs text-brume">
+        A verification code will then be sent by email.
       </p>
     </form>
   );

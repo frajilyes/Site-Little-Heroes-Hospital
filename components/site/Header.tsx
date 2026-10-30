@@ -4,21 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
-import { CalendarHeart, Menu, Phone, X } from "lucide-react";
+import { CalendarCheck, ChevronRight, Menu, Phone, Search, X } from "lucide-react";
 import { m } from "@/components/ui/motion";
+import { Pastille } from "./Decor";
 import { Logo } from "./Logo";
 
 const NAV = [
-  { href: "/", label: "Accueil" },
-  { href: "/services", label: "Services" },
-  { href: "/medecins", label: "Médecins" },
-  { href: "/activites", label: "Activités" },
-  { href: "/actualites", label: "Actualités" },
-  { href: "/infos-pratiques", label: "Infos pratiques" },
-  { href: "/espace-enfants", label: "Espace enfants" },
+  { href: "/", label: "Home" },
+  { href: "/services", label: "Departments" },
+  { href: "/medecins", label: "Doctors" },
+  { href: "/activites", label: "Activities" },
+  { href: "/actualites", label: "News" },
+  { href: "/infos-pratiques", label: "Practical Info" },
+  { href: "/espace-enfants", label: "Kids' Corner" },
 ];
 
-const NAV_MOBILE = [...NAV, { href: "/contact", label: "Contact" }, { href: "/dons", label: "Faire un don" }];
+const NAV_MOBILE = [...NAV, { href: "/contact", label: "Contact" }, { href: "/dons", label: "Make a donation" }];
 
 export function Header() {
   const pathname = usePathname();
@@ -27,13 +28,13 @@ export function Header() {
   const [lastPath, setLastPath] = useState(pathname);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Fermer le menu mobile à chaque navigation
+  // Close the mobile menu on every navigation
   if (pathname !== lastPath) {
     setLastPath(pathname);
     setOpen(false);
@@ -43,63 +44,74 @@ export function Header() {
 
   return (
     <>
-      {/* Bandeau urgences */}
-      <div className="bg-encre text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2 text-xs font-bold sm:text-sm">
-          <p className="flex items-center gap-2">
-            <span className="relative flex size-2.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-corail opacity-75" />
-              <span className="relative inline-flex size-2.5 rounded-full bg-corail" />
-            </span>
-            Urgences pédiatriques 24h/24 — 7j/7
+      {/* Service banner */}
+      <div className="bg-marine text-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2 text-[13px]">
+          <p className="flex items-center gap-2 font-medium">
+            <Pastille />
+            <span className="hidden sm:inline">Pediatric emergency open</span> 24/7
           </p>
-          <a href="tel:15" className="flex items-center gap-1.5 hover:text-soleil">
-            <Phone className="size-3.5" /> SAMU : 15<span className="hidden sm:inline"> · Accueil : 01 23 45 67 00</span>
-          </a>
+          <div className="flex items-center gap-4">
+            <a href="tel:15" className="flex items-center gap-1.5 font-semibold transition-colors hover:text-ciel">
+              <Phone className="size-3.5" /> Emergency: 15
+            </a>
+            <a href="tel:0123456700" className="hidden font-medium text-white/80 transition-colors hover:text-white sm:inline">
+              Phone: 01 23 45 67 00
+            </a>
+            <Link href="/admin" className="hidden font-medium text-white/60 transition-colors hover:text-white md:inline">
+              Staff area
+            </Link>
+          </div>
         </div>
       </div>
 
       <header
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled ? "bg-creme/85 shadow-[0_8px_30px_-12px_rgb(30_42_74/0.18)] backdrop-blur-xl" : "bg-transparent"
+        className={`sticky top-0 z-40 border-b bg-white transition-shadow duration-200 ${
+          scrolled ? "border-bord shadow-[0_4px_16px_-8px_rgb(13_35_64/0.25)]" : "border-transparent"
         }`}
       >
-        <div className={`mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 transition-all ${scrolled ? "py-2.5" : "py-4"}`}>
-          <Link href="/" aria-label="Accueil — Hôpital des Petits Héros">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3">
+          <Link href="/" aria-label="Home — Little Heroes Hospital" className="shrink-0">
             <Logo />
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Navigation principale">
+          <nav className="hidden items-center xl:flex" aria-label="Main navigation">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={isActive(item.href) ? "page" : undefined}
-                className={`relative isolate rounded-full px-3.5 py-2 text-sm font-bold transition-colors ${
-                  isActive(item.href) ? "text-encre" : "text-brume hover:text-encre"
+                className={`relative px-3 py-5 text-sm font-medium transition-colors ${
+                  isActive(item.href) ? "text-azur" : "text-encre/75 hover:text-azur"
                 }`}
               >
+                {item.label}
                 {isActive(item.href) && (
                   <m.span
-                    layoutId="nav-pill"
-                    className="absolute inset-0 -z-10 rounded-full bg-white shadow-sm"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    layoutId="nav-trait"
+                    className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-azur"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}
-                {item.label}
               </Link>
             ))}
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link href="/rendez-vous" className="btn hidden bg-corail text-white shadow-lg shadow-corail/30 sm:inline-flex">
-              <CalendarHeart className="size-4" /> Prendre RDV
+            <Link
+              href="/rendez-vous/suivi"
+              className="btn btn-secondaire hidden text-sm md:inline-flex"
+            >
+              <Search className="size-4" /> Track my appointment
+            </Link>
+            <Link href="/rendez-vous" className="btn btn-primaire hidden text-sm sm:inline-flex">
+              <CalendarCheck className="size-4" /> Book an appointment
             </Link>
             <button
               type="button"
               onClick={() => setOpen((o) => !o)}
-              className="grid size-11 place-items-center rounded-2xl bg-white shadow-sm lg:hidden"
-              aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+              className="grid size-10 place-items-center rounded-lg border border-bord text-encre xl:hidden"
+              aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
             >
               {open ? <X className="size-5" /> : <Menu className="size-5" />}
@@ -113,23 +125,25 @@ export function Header() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden border-t border-black/5 bg-creme lg:hidden"
-              aria-label="Navigation mobile"
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden border-t border-bord bg-white xl:hidden"
+              aria-label="Mobile navigation"
             >
-              <div className="grid gap-1 px-4 py-4">
-                {NAV_MOBILE.map((item, i) => (
-                  <m.div key={item.href} initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.035 }}>
-                    <Link
-                      href={item.href}
-                      className={`block rounded-2xl px-4 py-3 font-bold ${isActive(item.href) ? "bg-white text-encre shadow-sm" : "text-brume"}`}
-                    >
-                      {item.label}
-                    </Link>
-                  </m.div>
+              <div className="mx-auto max-w-7xl px-4 py-2">
+                {NAV_MOBILE.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center justify-between border-b border-bord/70 py-3 text-[15px] font-medium last:border-0 ${
+                      isActive(item.href) ? "text-azur" : "text-encre"
+                    }`}
+                  >
+                    {item.label}
+                    <ChevronRight className="size-4 text-brume" />
+                  </Link>
                 ))}
-                <Link href="/rendez-vous" className="btn mt-2 bg-corail text-white">
-                  <CalendarHeart className="size-4" /> Prendre rendez-vous
+                <Link href="/rendez-vous" className="btn btn-primaire my-3 w-full">
+                  <CalendarCheck className="size-4" /> Book an appointment
                 </Link>
               </div>
             </m.nav>

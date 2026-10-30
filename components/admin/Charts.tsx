@@ -3,20 +3,20 @@
 import { useState } from "react";
 import { m } from "@/components/ui/motion";
 
-// Une seule série par graphique : bleu de la palette de référence (contraste ≥ 4,5:1 sur blanc).
+// Single series per chart: blue from the reference palette (contrast ≥ 4.5:1 on white).
 const SERIE = "#2a78d6";
-const SERIE_PASSE = "#a9c9ef"; // même teinte, plus claire : jours passés
+const SERIE_PASSE = "#a9c9ef"; // same hue, lighter: past days
 const GRILLE = "#ece6dc";
 const TEXTE_2 = "#5b6787";
 
-const fmtJour = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric" });
-const fmtLong = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+const fmtJour = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric" });
+const fmtLong = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" });
 const versDate = (iso: string) => {
   const [y, mo, d] = iso.split("-").map(Number);
   return new Date(y, mo - 1, d, 12);
 };
 
-/** Rendez-vous par jour (14 jours passés + 7 à venir). */
+/** Appointments per day (14 past days + 7 upcoming). */
 export function RdvParJourChart({ data, aujourdhui }: { data: { jour: string; total: number; annules: number }[]; aujourdhui: string }) {
   const [survol, setSurvol] = useState<number | null>(null);
   const max = Math.max(4, ...data.map((d) => d.total));
@@ -27,7 +27,7 @@ export function RdvParJourChart({ data, aujourdhui }: { data: { jour: string; to
   return (
     <figure>
       <div className="relative flex gap-2">
-        {/* Axe Y */}
+        {/* Y axis */}
         <div className="relative w-6 shrink-0 text-right text-[11px] font-bold" style={{ height: H, color: TEXTE_2 }} aria-hidden>
           {graduations.map((g) => (
             <span key={g} className="absolute right-0 -translate-y-1/2" style={{ bottom: (g / max) * H - 6 }}>
@@ -36,7 +36,7 @@ export function RdvParJourChart({ data, aujourdhui }: { data: { jour: string; to
           ))}
         </div>
         <div className="relative flex-1">
-          {/* Grille */}
+          {/* Grid */}
           {graduations.map((g) => (
             <div key={g} className="absolute inset-x-0 border-t" style={{ bottom: (g / max) * H, borderColor: GRILLE }} aria-hidden />
           ))}
@@ -49,7 +49,7 @@ export function RdvParJourChart({ data, aujourdhui }: { data: { jour: string; to
                 <div
                   key={d.jour}
                   role="listitem"
-                  aria-label={`${fmtLong.format(versDate(d.jour))} : ${d.total} rendez-vous`}
+                  aria-label={`${fmtLong.format(versDate(d.jour))}: ${d.total} appointments`}
                   className="relative flex h-full flex-1 cursor-default items-end justify-center"
                   onMouseEnter={() => setSurvol(i)}
                   onMouseLeave={() => setSurvol(null)}
@@ -64,35 +64,38 @@ export function RdvParJourChart({ data, aujourdhui }: { data: { jour: string; to
                   />
                   {survol === i && (
                     <div className="pointer-events-none absolute bottom-full z-10 mb-2 w-max rounded-xl bg-encre px-3 py-2 text-xs text-white shadow-xl">
-                      <p className="font-extrabold capitalize">{fmtLong.format(versDate(d.jour))}</p>
-                      <p>{d.total} rendez-vous{d.annules ? ` · ${d.annules} annulé${d.annules > 1 ? "s" : ""}` : ""}</p>
+                      <p className="font-bold capitalize">{fmtLong.format(versDate(d.jour))}</p>
+                      <p>{d.total} appointments{d.annules ? ` · ${d.annules} cancelled` : ""}</p>
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-          {/* Axe X : une étiquette sur 3 + aujourd'hui */}
+          {/* X axis: one label out of every 3 + today */}
           <div className="mt-2 flex gap-[2px] text-[10px] font-bold" style={{ color: TEXTE_2 }} aria-hidden>
             {data.map((d, i) => (
-              <span key={d.jour} className={`flex-1 text-center whitespace-nowrap ${d.jour === aujourdhui ? "font-extrabold text-encre" : ""}`}>
-                {d.jour === aujourdhui ? "Auj." : i % 3 === 0 ? fmtJour.format(versDate(d.jour)) : ""}
+              <span key={d.jour} className={`flex-1 text-center whitespace-nowrap ${d.jour === aujourdhui ? "font-bold text-encre" : ""}`}>
+                {d.jour === aujourdhui ? "Today" : i % 3 === 0 ? fmtJour.format(versDate(d.jour)) : ""}
               </span>
             ))}
           </div>
         </div>
       </div>
       <figcaption className="mt-4 flex flex-wrap gap-4 text-xs font-bold" style={{ color: TEXTE_2 }}>
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm" style={{ background: SERIE_PASSE }} /> Jours passés</span>
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm" style={{ background: SERIE }} /> Aujourd&apos;hui et à venir</span>
+        <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm" style={{ background: SERIE_PASSE }} /> Past days</span>
+        <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm" style={{ background: SERIE }} /> Today and upcoming</span>
       </figcaption>
     </figure>
   );
 }
 
-/** Taux d'occupation des lits par service (barres horizontales, étiquettes directes). */
+/** Bed occupancy rate per department (horizontal bars, direct labels). */
 export function OccupationChart({ data }: { data: { nom: string; occupes: number; total: number }[] }) {
   const [survol, setSurvol] = useState<string | null>(null);
+  if (data.length === 0) {
+    return <p className="rounded-lg bg-creme p-4 text-sm text-brume">No departments registered.</p>;
+  }
   return (
     <ul className="grid gap-3">
       {data.map((s, i) => {
@@ -106,8 +109,8 @@ export function OccupationChart({ data }: { data: { nom: string; occupes: number
           >
             <div className="flex justify-between gap-2 text-sm">
               <span className="truncate font-bold">{s.nom}</span>
-              <span className="shrink-0 font-extrabold tabular-nums">
-                {survol === s.nom ? `${s.occupes} / ${s.total} lits` : `${pct} %`}
+              <span className="shrink-0 font-bold tabular-nums">
+                {survol === s.nom ? `${s.occupes} / ${s.total} beds` : `${pct} %`}
               </span>
             </div>
             <div className="mt-1.5 h-2.5 overflow-hidden rounded-full" style={{ background: GRILLE }}>

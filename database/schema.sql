@@ -1,6 +1,6 @@
 -- =====================================================================
---  Hôpital des Petits Héros — schéma MySQL 8
---  Exécuté par `npm run db:setup` (crée la base si besoin)
+--  Little Heroes Hospital — MySQL 8 schema
+--  Run by `npm run db:setup` (creates the database if needed)
 -- =====================================================================
 
 SET NAMES utf8mb4;
@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS dons;
 DROP TABLE IF EXISTS temoignages;
 DROP TABLE IF EXISTS codes_email;
 DROP TABLE IF EXISTS admin_codes;
+DROP TABLE IF EXISTS admin_audit;
 DROP TABLE IF EXISTS admins;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -29,6 +30,7 @@ CREATE TABLE services (
   accroche      VARCHAR(255) NOT NULL,
   description   TEXT         NOT NULL,
   icone         VARCHAR(40)  NOT NULL,
+  photo         VARCHAR(255) NULL COMMENT 'Unsplash id, full URL, or local file',
   couleur       VARCHAR(20)  NOT NULL,
   etage         VARCHAR(40)  NOT NULL,
   telephone     VARCHAR(30)  NOT NULL,
@@ -46,7 +48,7 @@ CREATE TABLE medecins (
   bio            TEXT         NOT NULL,
   experience_ans TINYINT UNSIGNED NOT NULL,
   langues        VARCHAR(120) NOT NULL,
-  avatar         VARCHAR(10)  NOT NULL,
+  photo          VARCHAR(255) NULL COMMENT 'portrait: Unsplash id, URL, or local file',
   disponible     TINYINT(1)   NOT NULL DEFAULT 1,
   CONSTRAINT fk_medecin_service FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
   INDEX idx_medecin_service (service_id)
@@ -60,7 +62,7 @@ CREATE TABLE activites (
   age_min     TINYINT UNSIGNED NOT NULL DEFAULT 0,
   age_max     TINYINT UNSIGNED NOT NULL DEFAULT 18,
   lieu        VARCHAR(120) NOT NULL,
-  jour        TINYINT UNSIGNED NOT NULL COMMENT '1 = lundi … 7 = dimanche',
+  jour        TINYINT UNSIGNED NOT NULL COMMENT '1 = Monday … 7 = Sunday',
   heure_debut TIME         NOT NULL,
   heure_fin   TIME         NOT NULL,
   places      SMALLINT UNSIGNED NOT NULL,
@@ -122,7 +124,7 @@ CREATE TABLE rendez_vous (
   created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_rdv_service FOREIGN KEY (service_id) REFERENCES services(id),
   CONSTRAINT fk_rdv_medecin FOREIGN KEY (medecin_id) REFERENCES medecins(id),
-  -- un médecin ne peut pas avoir deux rendez-vous actifs sur le même créneau
+  -- a doctor cannot have two active appointments in the same time slot
   slot_actif  VARCHAR(40) AS (IF(statut IN ('en_attente','confirme'), CONCAT(medecin_id,'|',date_rdv,'|',heure), NULL)) STORED,
   UNIQUE KEY uq_rdv_creneau (slot_actif),
   INDEX idx_rdv_date (date_rdv, statut)
@@ -135,7 +137,7 @@ CREATE TABLE actualites (
   resume     VARCHAR(400) NOT NULL,
   contenu    TEXT         NOT NULL,
   categorie  VARCHAR(40)  NOT NULL,
-  emoji      VARCHAR(10)  NOT NULL,
+  image      VARCHAR(255) NULL COMMENT 'illustration: Unsplash id, URL, or local file',
   couleur    VARCHAR(20)  NOT NULL,
   date_pub   DATE         NOT NULL,
   INDEX idx_actu_date (date_pub)
@@ -167,8 +169,7 @@ CREATE TABLE temoignages (
   auteur VARCHAR(120) NOT NULL,
   role   VARCHAR(120) NOT NULL,
   texte  TEXT         NOT NULL,
-  note   TINYINT UNSIGNED NOT NULL DEFAULT 5,
-  avatar VARCHAR(10)  NOT NULL
+  note   TINYINT UNSIGNED NOT NULL DEFAULT 5
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE admins (
@@ -178,7 +179,7 @@ CREATE TABLE admins (
   password_hash VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Codes de vérification envoyés par e-mail à la connexion (un seul code actif par admin)
+-- Verification codes sent by email at login (only one active code per admin)
 CREATE TABLE admin_codes (
   admin_id    INT UNSIGNED PRIMARY KEY,
   code_hash   CHAR(64)     NOT NULL,
@@ -188,7 +189,7 @@ CREATE TABLE admin_codes (
   CONSTRAINT fk_code_admin FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Codes de confirmation envoyés aux familles : la demande (RDV, annulation) attend ici la saisie du code
+-- Confirmation codes sent to families: the request (appointment, cancellation) waits here for the code to be entered
 CREATE TABLE codes_email (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   objet       ENUM('rdv','annulation') NOT NULL,
@@ -197,7 +198,25 @@ CREATE TABLE codes_email (
   code_hash   CHAR(64)     NOT NULL,
   expires_at  DATETIME     NOT NULL,
   tentatives  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  renvois     TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'codes re-sent for this request',
   created_at  DATETIME     NOT NULL,
   INDEX idx_code_email (email, created_at),
   INDEX idx_code_expire (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Who changed what in the staff area. Append-only: never updated, never deleted by the app.
+-- No foreign key to admins on purpose — the trail has to outlive the account it refers to,
+-- which a cascading delete would quietly erase.
+CREATE TABLE admin_audit (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  admin_id    INT UNSIGNED NULL,
+  admin_email VARCHAR(160) NOT NULL,
+  action      VARCHAR(60)  NOT NULL,
+  cible       VARCHAR(190) NULL,
+  adresse     VARCHAR(45)  NULL,
+  resultat    ENUM('ok','echec') NOT NULL,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_audit_date (created_at),
+  INDEX idx_audit_admin (admin_id, created_at),
+  INDEX idx_audit_action (action, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -6,6 +6,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { execute, isDuplicateError, queryOne, transaction } from "@/lib/db";
 import { CRENEAUX } from "@/lib/constants";
 import { PROJETS_DONS } from "@/lib/theme";
+import { adresseClient, delai, limiter } from "@/lib/rate-limit";
 import { EMAIL, HEURE, TEL, validate } from "@/lib/validation";
 import { dateLongue, heure as fmtHeure, parseDate, toISODate } from "@/lib/format";
 import { creerCode, renvoyerCode, TropDeDemandes, verifierCode, type Verification } from "@/lib/codes";
@@ -17,9 +18,27 @@ const ERREUR_SERVEUR: FormState = {
   message: "Oops, something went wrong. Please try again in a moment.",
 };
 
+const DEMANDE_INVALIDE: FormState = { ok: false, message: "Invalid request." };
+
 function reference(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from(randomBytes(8), (b) => alphabet[b % alphabet.length]).join("");
+}
+
+/**
+ * Per-caller ceiling for the public forms.
+ *
+ * The code ceiling in lib/codes.ts counts per e-mail address, which does nothing against
+ * a script that changes the address it submits each time — that path still costs us a
+ * database write and an outbound e-mail per attempt, and outbound spam is what gets a
+ * mail domain blocklisted. These limits cap what one caller can push through at all.
+ *
+ * Returns the message to send back, or null to carry on.
+ */
+async function tropDeTrafic(nom: string, max: number, fenetreS: number): Promise<FormState | null> {
+  const limite = limiter(`${nom}:${await adresseClient()}`, max, fenetreS);
+  if (limite.ok) return null;
+  return { ok: false, message: `Too many attempts. Please try again in ${delai(limite.retryAfter)}.` };
 }
 
 /* ------------------------------ Appointments ------------------------------ */
@@ -38,6 +57,10 @@ export async function prendreRendezVous(_prev: FormState, formData: FormData): P
     motif: { label: "Reason", required: true, min: 5, max: 500 },
   });
   if (!ok) return { ok: false, message: "Please correct the fields indicated.", errors, data };
+
+  // Each accepted request sends an e-mail: throttled before anything is written or sent.
+  const trop = await tropDeTrafic("rdv", 10, 900);
+  if (trop) return { ...trop, data };
 
   if (!CRENEAUX.includes(data.heure)) return { ok: false, message: "This time slot does not exist.", data };
 
@@ -185,11 +208,20 @@ async function verifierSaisie(objet: "rdv" | "annulation", formData: FormData): 
 }
 
 export async function renvoyerCodeEmail(jeton: string): Promise<FormState> {
+  // A Server Action argument is whatever the caller serialized, never a guaranteed string.
+  if (typeof jeton !== "string" || jeton.length > 800) return DEMANDE_INVALIDE;
+
+  // One outbound e-mail per call: throttled per caller, like the forms that create them.
+  const trop = await tropDeTrafic("renvoi", 10, 900);
+  if (trop) return trop;
+
   try {
     const attente = await renvoyerCode(jeton);
     if (attente > 0) return { ok: false, message: `Please wait ${attente}s before requesting a new code.` };
     return { ok: true, message: "A new code has been sent to you." };
   } catch (err) {
+    if (err instanceof TropDeDemandes)
+      return { ok: false, message: "Too many codes have been sent for this request. Please start over." };
     console.error(err);
     return { ok: false, message: "Could not resend the code. Please start over." };
   }
@@ -207,6 +239,9 @@ export async function inscrireActivite(_prev: FormState, formData: FormData): Pr
     telephone: { label: "Phone number", required: true, pattern: TEL, patternMsg: "Invalid phone number." },
   });
   if (!ok) return { ok: false, message: "Please correct the fields indicated.", errors, data };
+
+  const trop = await tropDeTrafic("activite", 20, 900);
+  if (trop) return { ...trop, data };
 
   try {
     const result = await transaction(async (conn) => {
@@ -265,6 +300,11 @@ export async function envoyerMessage(_prev: FormState, formData: FormData): Prom
   });
   if (!ok) return { ok: false, message: "Please correct the fields indicated.", errors, data };
 
+  // The contact form is unauthenticated and lands in the staff inbox: keep it from
+  // being usable as a flood channel.
+  const trop = await tropDeTrafic("contact", 5, 900);
+  if (trop) return { ...trop, data };
+
   try {
     await execute("INSERT INTO messages (nom, email, sujet, message) VALUES (?, ?, ?, ?)", [
       data.nom,
@@ -294,6 +334,9 @@ export async function faireDon(_prev: FormState, formData: FormData): Promise<Fo
   if (!Object.hasOwn(PROJETS_DONS, data.projet)) errors.projet = "Unknown project.";
   if (!ok || errors.projet) return { ok: false, message: "Please correct the fields indicated.", errors, data };
 
+  const trop = await tropDeTrafic("don", 10, 900);
+  if (trop) return { ...trop, data };
+
   try {
     await execute("INSERT INTO dons (nom, email, montant, projet, message) VALUES (?, ?, ?, ?, ?)", [
       data.nom || null,
@@ -316,9 +359,15 @@ export async function faireDon(_prev: FormState, formData: FormData): Promise<Fo
 export async function demanderAnnulation(_prev: FormState, formData: FormData): Promise<FormState> {
   const { data, ok } = validate(formData, {
     reference: { label: "Reference", required: true, pattern: /^[A-Z0-9]{8}$/ },
-    email: { label: "Email", required: true, pattern: EMAIL },
+    email: { label: "Email", required: true, pattern: EMAIL, max: 160 },
   });
   if (!ok) return { ok: false, message: "Invalid reference or email.", data };
+
+  // Each attempt probes one reference/address pair against the appointment table, so this
+  // is the one public form where guessing is the point. Throttle it before the lookup.
+  const trop = await tropDeTrafic("annulation", 10, 900);
+  if (trop) return { ...trop, data };
+
   const email = data.email.toLowerCase();
 
   try {

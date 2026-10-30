@@ -1,19 +1,20 @@
 import Link from "next/link";
+import { Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function AdminHeader({ titre, sousTitre, children }: { titre: string; sousTitre?: string; children?: ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-bord pb-6">
       <div>
-        <h1 className="animate-rise text-3xl font-semibold sm:text-4xl">{titre}</h1>
-        {sousTitre && <p className="mt-1 text-brume">{sousTitre}</p>}
+        <h1 className="animate-rise text-2xl font-bold sm:text-3xl">{titre}</h1>
+        {sousTitre && <p className="mt-1 text-sm text-brume">{sousTitre}</p>}
       </div>
       {children}
     </div>
   );
 }
 
-/** Onglets de filtre basés sur l'URL (fonctionnent sans JavaScript). */
+/** URL-based filter tabs (work without JavaScript). */
 export function FiltreOnglets({ base, courant, options, extra = {} }: { base: string; courant: string; options: [string, string, number?][]; extra?: Record<string, string> }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -24,7 +25,9 @@ export function FiltreOnglets({ base, courant, options, extra = {} }: { base: st
           <Link
             key={val}
             href={`${base}?${params}`}
-            className={`rounded-full px-4 py-2 text-sm font-bold transition-all ${on ? "bg-encre text-white shadow-md" : "bg-white text-brume hover:text-encre"}`}
+            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              on ? "border-azur bg-azur text-white" : "border-bord bg-white text-brume hover:border-azur hover:text-azur"
+            }`}
           >
             {label}
             {n !== undefined && <span className={`ml-1.5 ${on ? "text-white/70" : "text-brume/70"}`}>{n}</span>}
@@ -39,18 +42,18 @@ export function Recherche({ defaut, statut, placeholder }: { defaut: string; sta
   return (
     <form className="flex gap-2" role="search">
       <input type="hidden" name="statut" value={statut} />
-      <label htmlFor="q" className="sr-only">Rechercher</label>
+      <label htmlFor="q" className="sr-only">Search</label>
       <input id="q" name="q" defaultValue={defaut} placeholder={placeholder} className="field min-w-0 py-2" type="search" />
-      <button className="btn shrink-0 bg-encre px-4 py-2 text-sm text-white">OK</button>
+      <button className="btn btn-primaire shrink-0 px-4 py-2 text-sm">Search</button>
     </form>
   );
 }
 
-export function Vide({ emoji, texte }: { emoji: string; texte: string }) {
+export function Vide({ texte }: { texte: string }) {
   return (
     <div className="card p-12 text-center">
-      <p className="text-5xl">{emoji}</p>
-      <p className="mt-3 font-bold text-brume">{texte}</p>
+      <Inbox className="mx-auto size-7 text-brume/60" />
+      <p className="mt-3 text-sm text-brume">{texte}</p>
     </div>
   );
 }

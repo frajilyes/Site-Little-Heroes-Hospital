@@ -1,5 +1,15 @@
-// Jeton de session signé (HMAC-SHA256) — utilisable côté serveur et dans proxy.ts.
-export const SESSION_COOKIE = "ph_session";
+// Signed session token (HMAC-SHA256) — usable server-side and in proxy.ts.
+
+/**
+ * `__Host-` tells the browser to refuse the cookie unless it is Secure, scoped to Path=/
+ * and carries no Domain attribute. That last part is the point: without it, anything able
+ * to set a cookie for a sibling or parent domain can overwrite the session cookie, and the
+ * server cannot tell which one it received. The prefix requires Secure, which browsers
+ * will not accept over plain http, so it is production-only.
+ */
+export const PREFIXE_COOKIE = process.env.NODE_ENV === "production" ? "__Host-" : "";
+
+export const SESSION_COOKIE = `${PREFIXE_COOKIE}ph_session`;
 export const SESSION_DURATION_S = 60 * 60 * 8; // 8 h
 
 export interface SessionPayload {
@@ -11,9 +21,17 @@ export interface SessionPayload {
 
 const encoder = new TextEncoder();
 
-function secret(): string {
+/**
+ * The signing key, or a hard failure. Never falls back to a default: an empty key still
+ * produces a valid-looking HMAC, so every token the app ever issued would be forgeable
+ * by anyone who guessed the secret was missing.
+ */
+export function secret(): string {
   const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 16) throw new Error("SESSION_SECRET manquant ou trop court dans .env.local");
+  // 32 characters, not 16: this one key signs the staff session, the pending-2FA cookie,
+  // the trusted-device cookie and every confirmation code in the database. Guessing it
+  // forges all of them at once, and the cost of a long one is nil.
+  if (!s || s.length < 32) throw new Error("SESSION_SECRET missing or shorter than 32 characters");
   return s;
 }
 
@@ -35,7 +53,7 @@ async function hmacKey() {
   ]);
 }
 
-/** Signe un jeton typé : un jeton d'un type (ex. « code en attente ») n'est jamais accepté pour un autre. */
+/** Signs a typed token: a token of one type (e.g. "pending code") is never accepted for another. */
 export async function signToken<T extends { exp: number }>(typ: string, payload: T): Promise<string> {
   const body = toBase64Url(encoder.encode(JSON.stringify({ ...payload, typ })));
   const sig = await crypto.subtle.sign("HMAC", await hmacKey(), encoder.encode(body));

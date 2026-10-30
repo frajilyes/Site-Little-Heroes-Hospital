@@ -15,7 +15,7 @@ import type {
 } from "./types";
 
 /* ------------------------------------------------------------------ */
-/*  Public                                                             */
+/*  Public                                                            */
 /* ------------------------------------------------------------------ */
 
 const SERVICE_COLS = `s.*,
@@ -41,8 +41,8 @@ export const getMedecinsByService = cache((serviceId: number) =>
   query<Medecin>(`${MEDECIN_SELECT} WHERE m.service_id = ? ORDER BY m.nom`, [serviceId]),
 );
 
-// Prochaine occurrence (aujourd'hui inclus) du jour de la semaine de l'activité.
-// WEEKDAY() : 0 = lundi ; la colonne `jour` : 1 = lundi.
+// Next occurrence (today included) of the activity's weekday.
+// WEEKDAY(): 0 = Monday; the `jour` column: 1 = Monday.
 const PROCHAINE_DATE = `DATE_ADD(CURDATE(), INTERVAL MOD(CAST(a.jour AS SIGNED) - 1 - WEEKDAY(CURDATE()) + 7, 7) DAY)`;
 
 const ACTIVITE_SELECT = `SELECT a.*, ${PROCHAINE_DATE} AS prochaine_date,
@@ -90,7 +90,7 @@ export const getPublicStats = cache(async () => {
     (SELECT COUNT(*) FROM services) AS services,
     (SELECT COUNT(*) FROM medecins) AS medecins,
     (SELECT COUNT(*) FROM activites WHERE actif = 1) AS activites,
-    (SELECT COUNT(*) FROM patients) + (SELECT COUNT(*) FROM rendez_vous WHERE statut = 'termine') + 12480 AS enfants_soignes,
+    (SELECT COUNT(*) FROM patients) + (SELECT COUNT(*) FROM rendez_vous WHERE statut = 'termine') AS enfants_soignes,
     (SELECT COALESCE(SUM(lits_total), 0) FROM services) AS lits,
     (SELECT COALESCE(SUM(montant), 0) FROM dons) AS dons_total`);
   return row!;
@@ -125,8 +125,31 @@ export async function getCreneauxPris(medecinId: number, date: string): Promise<
   return rows.map((r) => r.heure);
 }
 
-export const getRendezVousByReference = (reference: string) =>
-  queryOne<RendezVous>(`${RDV_SELECT} WHERE r.reference = ?`, [reference]);
+/** What the public tracking page is allowed to show (see getSuiviRendezVous). */
+export type SuiviRendezVous = Pick<
+  RendezVous,
+  "reference" | "enfant_nom" | "enfant_age" | "service_nom" | "medecin_nom" | "date_rdv" | "heure" | "statut"
+>;
+
+/**
+ * Appointment behind an 8-character reference, for the unauthenticated tracking page.
+ *
+ * Columns are listed one by one instead of reusing RDV_SELECT's `r.*`: that would hand a
+ * public page the parent's e-mail and phone number and the reason for the visit, none of
+ * which it displays. Nothing leaks today — a Server Component only sends what it renders —
+ * but the row is one careless `<Component rdv={rdv} />` away from the browser, and the
+ * reference alone is enough to request it.
+ */
+export const getSuiviRendezVous = (reference: string) =>
+  queryOne<SuiviRendezVous>(
+    `SELECT r.reference, r.enfant_nom, r.enfant_age, r.date_rdv, r.heure, r.statut,
+       s.nom AS service_nom, CONCAT(m.titre, ' ', m.prenom, ' ', m.nom) AS medecin_nom
+     FROM rendez_vous r
+     JOIN services s ON s.id = r.service_id
+     JOIN medecins m ON m.id = r.medecin_id
+     WHERE r.reference = ?`,
+    [reference],
+  );
 
 /* ------------------------------------------------------------------ */
 /*  Administration                                                     */
@@ -232,7 +255,7 @@ export async function getDashboardStats() {
 }
 
 export function getRdvParJour() {
-  // 14 derniers jours + 7 prochains, y compris les jours sans rendez-vous
+  // Last 14 days + next 7, including days with no appointments
   return query<{ jour: string; total: number; annules: number }>(
     `WITH RECURSIVE jours AS (
        SELECT DATE_SUB(CURDATE(), INTERVAL 13 DAY) AS jour

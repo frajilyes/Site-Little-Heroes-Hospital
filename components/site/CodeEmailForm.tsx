@@ -11,15 +11,15 @@ const RESEND_DELAY_S = 60;
 type Props = {
   jeton: string;
   email: string;
-  /** Server Action qui vérifie le code (reçoit `jeton` et `code`). */
+  /** Server Action that verifies the code (receives `jeton` and `code`). */
   confirmer: (prev: FormState, formData: FormData) => Promise<FormState>;
   onResult?: (state: FormState) => void;
   onRetour: () => void;
   retourLabel: string;
-  children: ReactNode; // libellé du bouton de validation
+  children: ReactNode; // label of the confirm button
 };
 
-/** Étape « Vérifiez votre boîte mail » : saisie du code à 6 chiffres, renvoi, retour. */
+/** "Check your inbox" step: enter the 6-digit code, resend, go back. */
 export function CodeEmailForm({ jeton, email, confirmer, onResult, onRetour, retourLabel, children }: Props) {
   const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData) => {
     const result = await confirmer(prev, formData);
@@ -40,16 +40,16 @@ export function CodeEmailForm({ jeton, email, confirmer, onResult, onRetour, ret
   }, [attente]);
 
   return (
-    <div className="grid animate-pop gap-4">
-      <div className="flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-900">
+    <div className="grid animate-fade gap-4">
+      <div className="flex items-start gap-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-900">
         <MailCheck className="size-6 shrink-0 text-emerald-600" />
         <p>
-          Un code à 6 chiffres vient d&apos;être envoyé à <strong>{email}</strong>. Pensez à vérifier vos courriers indésirables.
+          A 6-digit code has just been sent to <strong>{email}</strong>. Remember to check your spam folder.
         </p>
       </div>
       <form action={action} className="grid gap-4">
         <input type="hidden" name="jeton" value={jeton} />
-        <Field label="Code reçu par e-mail" name="code" error={state.errors?.code}>
+        <Field label="Code received by e-mail" name="code" error={state.errors?.code}>
           <input
             id="code"
             name="code"
@@ -68,7 +68,7 @@ export function CodeEmailForm({ jeton, email, confirmer, onResult, onRetour, ret
         </Field>
         <FormAlert state={state.ok ? ETAT_INITIAL : state} />
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <button type="button" onClick={onRetour} className="text-sm font-extrabold text-brume hover:text-encre hover:underline">
+          <button type="button" onClick={onRetour} className="text-sm font-bold text-brume hover:text-encre hover:underline">
             {retourLabel}
           </button>
           <SubmitButton pending={pending}>{children}</SubmitButton>
@@ -76,7 +76,7 @@ export function CodeEmailForm({ jeton, email, confirmer, onResult, onRetour, ret
       </form>
       <form action={resendAction} className="text-sm font-bold">
         <button type="submit" disabled={attente > 0 || resending} className="text-corail hover:underline disabled:text-brume disabled:no-underline">
-          {resending ? "Envoi…" : attente > 0 ? `Vous n'avez rien reçu ? Renvoyer le code (${attente} s)` : "Vous n'avez rien reçu ? Renvoyer le code"}
+          {resending ? "Sending…" : attente > 0 ? `Didn't receive anything? Resend the code (${attente} s)` : "Didn't receive anything? Resend the code"}
         </button>
       </form>
       <FormAlert state={resendState} />

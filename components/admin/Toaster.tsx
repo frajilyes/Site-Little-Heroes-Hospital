@@ -36,7 +36,7 @@ export function Toaster() {
             initial={{ opacity: 0, x: 60, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 60 }}
-            className={`flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-bold shadow-2xl ${t.ok ? "bg-encre text-white" : "bg-corail text-white"}`}
+            className={`flex items-center gap-3 rounded-lg px-5 py-3.5 text-sm font-bold shadow-2xl ${t.ok ? "bg-marine text-white" : "bg-corail text-white"}`}
           >
             {t.ok ? <CheckCircle2 className="size-5 text-menthe" /> : <TriangleAlert className="size-5" />}
             {t.message}
@@ -47,7 +47,7 @@ export function Toaster() {
   );
 }
 
-/** Bouton qui exécute une Server Action liée (`action.bind(null, id)`) et affiche un toast. */
+/** Button that runs a bound Server Action (`action.bind(null, id)`) and shows a toast. */
 export function ActionButton({
   action,
   children,
@@ -74,18 +74,18 @@ export function ActionButton({
           try {
             toast(await action());
           } catch {
-            toast({ ok: false, message: "Action impossible, réessayez." });
+            toast({ ok: false, message: "Action failed, please try again." });
           }
         });
       }}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold transition-all hover:-translate-y-0.5 disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50 ${className}`}
     >
       {pending ? <Loader2 className="size-4 animate-spin" /> : children}
     </button>
   );
 }
 
-/** Liste déroulante de statut qui appelle une Server Action à chaque changement. */
+/** Status dropdown that calls a Server Action on every change. */
 export function StatutSelect({
   action,
   value,
@@ -99,7 +99,7 @@ export function StatutSelect({
 }) {
   const [pending, start] = useTransition();
   const [courant, setCourant] = useState(value);
-  // Resynchronise si le serveur renvoie une autre valeur
+  // Resync if the server returns a different value
   const [prec, setPrec] = useState(value);
   if (value !== prec) {
     setPrec(value);
@@ -109,7 +109,7 @@ export function StatutSelect({
     <select
       value={courant}
       disabled={pending}
-      aria-label="Statut"
+      aria-label="Status"
       onChange={(e) => {
         const v = e.target.value;
         const ancien = courant;
@@ -120,7 +120,7 @@ export function StatutSelect({
           toast(res);
         });
       }}
-      className={`cursor-pointer rounded-full border-0 px-3 py-1.5 text-xs font-extrabold disabled:opacity-60 ${options[courant]?.cls ?? ""} ${className}`}
+      className={`cursor-pointer rounded-full border-0 px-3 py-1.5 text-xs font-bold disabled:opacity-60 ${options[courant]?.cls ?? ""} ${className}`}
     >
       {Object.entries(options).map(([k, o]) => (
         <option key={k} value={k}>

@@ -22,7 +22,7 @@ function melanger(): Carte[] {
 }
 
 export function Memory() {
-  // Mélange après le montage : le rendu serveur et le premier rendu client restent identiques
+  // Shuffle after mount: server render and first client render stay identical
   const [cartes, setCartes] = useState<Carte[]>(() => [...EMOJIS, ...EMOJIS].map((emoji, id) => ({ id, emoji, trouvee: false })));
   const [retournees, setRetournees] = useState<number[]>([]);
   const [coups, setCoups] = useState(0);
@@ -35,7 +35,7 @@ export function Memory() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mélange aléatoire uniquement côté client
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- random shuffle, client-side only
     nouvellePartie();
     try {
       const r = localStorage.getItem("memory-record");
@@ -73,14 +73,14 @@ export function Memory() {
     <div className="card p-5 sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">🧠 Le Memory des animaux</h2>
-          <p className="text-sm text-brume">Retrouve toutes les paires en un minimum de coups !</p>
+          <h2 className="text-2xl font-semibold">🧠 Animal Memory</h2>
+          <p className="text-sm text-brume">Find all the pairs in as few tries as possible!</p>
         </div>
-        <div className="flex items-center gap-2 text-sm font-extrabold">
-          <span className="rounded-full bg-creme px-3 py-1.5">Coups : {coups}</span>
-          {record !== null && <span className="rounded-full bg-amber-100 px-3 py-1.5 text-amber-800">🏆 Record : {record}</span>}
-          <button type="button" onClick={nouvellePartie} className="btn bg-encre px-4 py-2 text-white">
-            <Shuffle className="size-4" /> Rejouer
+        <div className="flex items-center gap-2 text-sm font-bold">
+          <span className="rounded-full bg-creme px-3 py-1.5">Tries: {coups}</span>
+          {record !== null && <span className="rounded-full bg-amber-100 px-3 py-1.5 text-amber-800">🏆 Best: {record}</span>}
+          <button type="button" onClick={nouvellePartie} className="btn btn-primaire px-4 py-2">
+            <Shuffle className="size-4" /> Play again
           </button>
         </div>
       </div>
@@ -93,7 +93,7 @@ export function Memory() {
               key={c.id}
               type="button"
               onClick={() => retourner(i)}
-              aria-label={visible ? c.emoji : "Carte cachée"}
+              aria-label={visible ? c.emoji : "Hidden card"}
               className="relative aspect-square"
             >
               <m.span
@@ -102,11 +102,11 @@ export function Memory() {
                 animate={{ rotateY: visible ? 180 : 0, scale: c.trouvee ? [1, 1.12, 1] : 1 }}
                 transition={{ duration: 0.45 }}
               >
-                <span className="absolute inset-0 grid place-items-center rounded-2xl bg-gradient-to-br from-ciel to-lavande text-2xl text-white shadow-md [backface-visibility:hidden]">
+                <span className="absolute inset-0 grid place-items-center rounded-lg bg-linear-to-br from-ciel to-lavande text-2xl text-white shadow-md [backface-visibility:hidden]">
                   ?
                 </span>
                 <span
-                  className={`absolute inset-0 grid place-items-center rounded-2xl text-3xl shadow-md [backface-visibility:hidden] sm:text-4xl ${c.trouvee ? "bg-emerald-100" : "bg-white"}`}
+                  className={`absolute inset-0 grid place-items-center rounded-lg text-3xl shadow-md [backface-visibility:hidden] sm:text-4xl ${c.trouvee ? "bg-emerald-100" : "bg-white"}`}
                   style={{ transform: "rotateY(180deg)" }}
                 >
                   {c.emoji}
@@ -119,10 +119,10 @@ export function Memory() {
 
       <AnimatePresence>
         {gagne && coups > 0 && (
-          <m.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="mt-6 rounded-2xl bg-emerald-50 p-5 text-center">
+          <m.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="mt-6 rounded-lg bg-emerald-50 p-5 text-center">
             <Confetti />
-            <p className="font-display text-2xl font-semibold text-emerald-700">Bravo, petit héros ! 🎉</p>
-            <p className="text-sm font-bold text-emerald-700">Toutes les paires trouvées en {coups} coups.</p>
+            <p className="font-display text-2xl font-semibold text-emerald-700">Well done, little hero! 🎉</p>
+            <p className="text-sm font-bold text-emerald-700">All pairs found in {coups} tries.</p>
           </m.div>
         )}
       </AnimatePresence>
@@ -130,7 +130,7 @@ export function Memory() {
   );
 }
 
-/* ============================== Dessin ============================== */
+/* ============================== Drawing ============================== */
 
 const COULEURS_DESSIN = ["#1e2a4a", "#ff6b6b", "#ffc93c", "#3ccfa5", "#4aa8ff", "#9b8cff", "#ff9f43", "#ffffff"];
 
@@ -187,34 +187,34 @@ export function Dessin() {
     if (!url) return;
     const a = document.createElement("a");
     a.href = url;
-    a.download = "mon-dessin-petit-heros.png";
+    a.download = "my-superhero-drawing.png";
     a.click();
   };
 
   return (
     <div className="card p-5 sm:p-8">
-      <h2 className="text-2xl font-semibold">🖍️ Dessine ton super-héros</h2>
-      <p className="text-sm text-brume">Avec ton doigt ou ta souris. Tu pourras l&apos;offrir à ton docteur !</p>
+      <h2 className="text-2xl font-semibold">🖍️ Draw your superhero</h2>
+      <p className="text-sm text-brume">With your finger or your mouse. You can give it to your doctor!</p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {COULEURS_DESSIN.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setCouleur(c)}
-            aria-label={`Couleur ${c}`}
+            aria-label={`Color ${c}`}
             aria-pressed={couleur === c}
             className={`size-9 rounded-full border-2 border-black/10 transition-transform ${couleur === c ? "scale-125 ring-4 ring-black/10" : "hover:scale-110"}`}
             style={{ background: c }}
           />
         ))}
         <label className="ml-auto flex items-center gap-2 text-sm font-bold">
-          Taille
+          Size
           <input type="range" min={2} max={30} value={taille} onChange={(e) => setTaille(Number(e.target.value))} className="accent-corail" />
         </label>
       </div>
       <canvas
         ref={canvasRef}
-        className="mt-4 h-80 w-full cursor-crosshair touch-none rounded-2xl border-4 border-dashed border-[#f1ebe2] bg-white"
+        className="mt-4 h-80 w-full cursor-crosshair touch-none rounded-lg border-4 border-dashed border-bord bg-white"
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
           dessine.current = true;
@@ -232,28 +232,28 @@ export function Dessin() {
         }}
       />
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={effacer} className="btn bg-creme text-encre">
-          <Eraser className="size-4" /> Tout effacer
+        <button type="button" onClick={effacer} className="btn btn-secondaire">
+          <Eraser className="size-4" /> Clear all
         </button>
-        <button type="button" onClick={telecharger} className="btn bg-encre text-white">
-          <Download className="size-4" /> Enregistrer
+        <button type="button" onClick={telecharger} className="btn btn-primaire">
+          <Download className="size-4" /> Save
         </button>
       </div>
     </div>
   );
 }
 
-/* ============================== Blagues ============================== */
+/* ============================== Jokes ============================== */
 
 const BLAGUES = [
-  ["Pourquoi les plongeurs plongent-ils toujours en arrière ?", "Parce que sinon ils tombent dans le bateau ! 🤿"],
-  ["Que dit un docteur à un squelette ?", "Tu es venu trop tard, il ne reste que les os ! 💀"],
-  ["Quel est le comble pour un médecin ?", "D'avoir un patient… impatient ! ⏳"],
-  ["Pourquoi le livre de maths est-il triste ?", "Parce qu'il a trop de problèmes ! 📘"],
-  ["Qu'est-ce qui est jaune et qui attend ?", "Jonathan ! 🍋"],
-  ["Comment appelle-t-on un chat tombé dans un pot de peinture le jour de Noël ?", "Un chat-peint de Noël ! 🎄"],
-  ["Pourquoi les poissons détestent l'ordinateur ?", "À cause du net ! 🐟"],
-  ["Que fait une fraise sur un cheval ?", "Tagada tagada ! 🍓"],
+  ["Why don't skeletons fight each other?", "They don't have the guts! 💀"],
+  ["What did the doctor say to the broken glass?", "Take it easy, don't cut yourself! 🏥"],
+  ["What's the difference between a nurse and a nagging wife?", "The nurse only pokes you with a needle once! ⏳"],
+  ["Why was the math book sad?", "Because it had too many problems! 📘"],
+  ["What do you call a fish with no eyes?", "A fsh! 🐟"],
+  ["What do you call a cat that fell into a paint can on Christmas Day?", "A Christmas-painted cat! 🎄"],
+  ["Why don't fish like going on the computer?", "They're afraid of the net! 🐠"],
+  ["What does a strawberry say when it rides a horse?", "Tagada tagada! 🍓"],
 ];
 
 export function Blagues() {
@@ -261,8 +261,8 @@ export function Blagues() {
   const [revele, setRevele] = useState(false);
   const [q, r] = BLAGUES[i];
   return (
-    <div className="card relative overflow-hidden bg-gradient-to-br from-amber-100 to-rose-100 p-6 sm:p-8">
-      <h2 className="text-2xl font-semibold">😂 La blague du docteur</h2>
+    <div className="card relative overflow-hidden bg-linear-to-br from-amber-100 to-rose-100 p-6 sm:p-8">
+      <h2 className="text-2xl font-semibold">😂 The doctor’s joke</h2>
       <AnimatePresence mode="wait">
         <m.div key={i} initial={{ opacity: 0, rotateX: -60 }} animate={{ opacity: 1, rotateX: 0 }} exit={{ opacity: 0, rotateX: 60 }} className="mt-4 min-h-28">
           <p className="font-display text-xl font-semibold">{q}</p>
@@ -277,8 +277,8 @@ export function Blagues() {
       </AnimatePresence>
       <div className="mt-4 flex flex-wrap gap-2">
         {!revele ? (
-          <button type="button" onClick={() => setRevele(true)} className="btn bg-corail text-white">
-            Voir la réponse
+          <button type="button" onClick={() => setRevele(true)} className="btn btn-primaire">
+            See the answer
           </button>
         ) : (
           <button
@@ -287,9 +287,9 @@ export function Blagues() {
               setRevele(false);
               setI((i + 1) % BLAGUES.length);
             }}
-            className="btn bg-encre text-white"
+            className="btn btn-primaire"
           >
-            <RotateCcw className="size-4" /> Une autre !
+            <RotateCcw className="size-4" /> Another one!
           </button>
         )}
       </div>

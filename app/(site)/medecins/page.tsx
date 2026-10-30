@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { getMedecins, getServices } from "@/lib/data";
+import { pluriel } from "@/lib/format";
+import { VISUELS } from "@/lib/images";
 import { PageHero } from "@/components/site/PageHero";
 import { MedecinsExplorer } from "@/components/site/MedecinsExplorer";
 
 export const metadata: Metadata = {
-  title: "Nos médecins",
-  description: "Découvrez les pédiatres et spécialistes de l'Hôpital des Petits Héros et prenez rendez-vous en ligne.",
+  title: "Our Doctors",
+  description: "Meet the pediatricians and specialists at Little Heroes Hospital and book an appointment online.",
 };
 
 export default async function MedecinsPage() {
@@ -13,13 +15,13 @@ export default async function MedecinsPage() {
   return (
     <>
       <PageHero
-        emoji="🩺"
-        badge={`${medecins.length} spécialistes`}
-        titre="Des médecins au grand cœur"
-        sousTitre="Pédiatres, chirurgiens, psychologues : rencontrez les équipes qui prennent soin de votre enfant."
-        ton="menthe"
+        photo={VISUELS.medecins}
+        icone="users"
+        badge={medecins.length ? `${medecins.length} practitioner${pluriel(medecins.length)}` : undefined}
+        titre="Directory of practitioners"
+        sousTitre="Pediatricians, surgeons, psychologists: background, languages spoken, and availability for every team member."
       />
-      <section className="mx-auto max-w-7xl px-4 py-12">
+      <section className="mx-auto max-w-7xl px-4 py-14">
         <MedecinsExplorer medecins={medecins} services={services} />
       </section>
     </>

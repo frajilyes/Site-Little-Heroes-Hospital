@@ -2,8 +2,8 @@
 
 import { m } from "@/components/ui/motion";
 
-// Fondu entre les pages (template est remonté à chaque navigation).
-// Opacité uniquement : un transform casserait le positionnement « fixed » des modales.
+// Fade between pages (template is remounted on every navigation).
+// Opacity only: a transform would break the "fixed" positioning of modals.
 export default function Template({ children }: { children: React.ReactNode }) {
   return (
     <m.div

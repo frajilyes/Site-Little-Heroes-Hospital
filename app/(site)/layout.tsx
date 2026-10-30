@@ -4,11 +4,16 @@ import { Footer } from "@/components/site/Footer";
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      {/*
+        Keyboard shortcut past the header. Revealed on :focus-visible, not :focus — a plain :focus
+        also matches a click or a focus the browser restores on load, which pops the box over the
+        top-left corner of the page for a visitor who never asked for it.
+      */}
       <a
         href="#contenu"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-2"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:rounded-xl focus-visible:bg-white focus-visible:px-4 focus-visible:py-2"
       >
-        Aller au contenu
+        Skip to content
       </a>
       <Header />
       <main id="contenu" className="flex-1">
